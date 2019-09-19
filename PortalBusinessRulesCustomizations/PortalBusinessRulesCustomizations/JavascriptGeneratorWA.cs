@@ -9,6 +9,10 @@ using System.Threading.Tasks;
 
 namespace PortalBusinessRulesCustomizations
 {
+    public enum OprandType
+    {
+
+    }
    public  class JavascriptGeneratorWA : CodeActivity
     {
         #region Inputs/Outputs
@@ -48,39 +52,16 @@ namespace PortalBusinessRulesCustomizations
             string negativeJson = NegativeJsonInput.Get<string>(executionContext);
 
 
-            string ifStatement = GenerateIfStatement(operand1, operatorValue, operand2);
-            string ifTrueBody = GenerateIfBody(positiveJson);
-            string ifFalseBody = GenerateIfBody(negativeJson);
-            string finalOutput = $"{ifStatement}{{ \n {ifTrueBody} \n }} \n else {{ \n {ifFalseBody} \n }} ";
+            string ifStatement = JavascriptHelper.GenerateIfStatement(operand1, operatorValue, operand2);
+            string ifTrueBody = JavascriptHelper.GenerateIfBody(positiveJson);
+            string ifFalseBody = JavascriptHelper.GenerateIfBody(negativeJson);
+
+            string helperFunctions = JavascriptHelper.GetAllHelperFunctions();
+            string finalOutput = $"{ifStatement}{{ \n {ifTrueBody} \n }} \n else {{ \n {ifFalseBody} \n }} \n\n ${helperFunctions} ";
 
             AutomaticJsOutput.Set(executionContext, finalOutput);
 
         }
 
-        private string GenerateIfBody(string positiveJson)
-        {
-            return "SomeJS here";
-        }
-
-        private string GenerateIfStatement(string operand1, string operatorValue, string operand2)
-        {
-            string operatorSymbol="";
-            switch(operatorValue)
-            {
-                case "Equal":
-                    operatorSymbol = "==";
-                    break;
-                case "Not Equal":
-                    operatorSymbol = "!=";
-                    break;
-                case "Less Than":
-                    operatorSymbol = "<";
-                    break;
-                case "Less Thank or Equal":
-                    operatorSymbol = "<=";
-                    break;
-            }
-            return $"if ($(\"#{operand1}\").val() {operatorSymbol} {operand2})";
-        }
     }
 }
