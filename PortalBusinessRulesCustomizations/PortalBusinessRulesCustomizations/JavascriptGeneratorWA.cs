@@ -17,6 +17,10 @@ namespace PortalBusinessRulesCustomizations
         [RequiredArgument]
         [Input("Operand1")]
         public InArgument<string> Operand1Input { get; set; }
+
+        [RequiredArgument]
+        [Input("Operand1Type")]
+        public InArgument<string> Operand1TypeInput { get; set; }
         [RequiredArgument]
         [Input("Operator")]
         public InArgument<string> OperatorInput { get; set; }
@@ -43,6 +47,7 @@ namespace PortalBusinessRulesCustomizations
             IOrganizationService service = serviceFactory.CreateOrganizationService(context.UserId);
 
             string operand1 = Operand1Input.Get<string>(executionContext);
+            string operand1Type = Operand1TypeInput.Get<string>(executionContext);
             string operand2 = Operand2Input.Get<string>(executionContext);
             string operatorValue =  OperatorInput.Get<string>(executionContext);
             string positiveJson = PositiveJsonInput.Get<string>(executionContext);
@@ -50,7 +55,7 @@ namespace PortalBusinessRulesCustomizations
 
 
             JavascriptGenerator generator = new JavascriptGenerator();
-           string resultJs= generator.GenerateJavacript(operand1, operatorValue, operand2, positiveJson, negativeJson);
+           string resultJs= generator.GenerateJavacript(operand1, operatorValue, operand2,operand1Type, positiveJson, negativeJson);
 
             AutomaticJsOutput.Set(executionContext, resultJs);
         }
