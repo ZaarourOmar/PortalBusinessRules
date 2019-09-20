@@ -9,10 +9,7 @@ using System.Threading.Tasks;
 
 namespace PortalBusinessRulesCustomizations
 {
-    public enum OprandType
-    {
-
-    }
+    
    public  class JavascriptGeneratorWA : CodeActivity
     {
         #region Inputs/Outputs
@@ -52,15 +49,10 @@ namespace PortalBusinessRulesCustomizations
             string negativeJson = NegativeJsonInput.Get<string>(executionContext);
 
 
-            string ifStatement = JavascriptHelper.GenerateIfStatement(operand1, operatorValue, operand2);
-            string ifTrueBody = JavascriptHelper.GenerateIfBody(positiveJson);
-            string ifFalseBody = JavascriptHelper.GenerateIfBody(negativeJson);
+            JavascriptGenerator generator = new JavascriptGenerator();
+           string resultJs= generator.GenerateJavacript(operand1, operatorValue, operand2, positiveJson, negativeJson);
 
-            string helperFunctions = JavascriptHelper.GetAllHelperFunctions();
-            string finalOutput = $"{ifStatement}{{ \n {ifTrueBody} \n }} \n else {{ \n {ifFalseBody} \n }} \n\n ${helperFunctions} ";
-
-            AutomaticJsOutput.Set(executionContext, finalOutput);
-
+            AutomaticJsOutput.Set(executionContext, resultJs);
         }
 
     }
