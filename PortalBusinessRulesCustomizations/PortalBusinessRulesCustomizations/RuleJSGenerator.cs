@@ -128,7 +128,7 @@ namespace PortalBusinessRulesCustomizations
             //end of the document
             sb.Append("});// end document ready\n"); // end document ready
 
-            sb.Append($"\n{StaticJavascriptHelpers.GetAllHelperFunctions()};\n");
+           // sb.Append($"\n{StaticJavascriptHelpers.GetAllHelperFunctions()}\n");
 
             sb.Append(BlockEnd);
 
@@ -146,32 +146,33 @@ namespace PortalBusinessRulesCustomizations
                 List<RuleAction> actions = converter.DeSerialize(actionsJson);
                 foreach (RuleAction action in actions)
                 {
-                    string fieldName = action.target;
+                    string targetName = action.target; // can be a section or a field
+                    string message = action.message;
                     switch (action.type)
                     {
                         case "Show Field":
-                            sb.Append($"setVisible(\"{fieldName}\",true);\n");
+                            sb.Append($"setVisible(\"{targetName}\",true);\n");
                             break;
                         case "Hide Field":
-                            sb.Append($"setVisible(\"{fieldName}\",false);\n");
+                            sb.Append($"setVisible(\"{targetName}\",false);\n");
                             break;
                         case "Make Required":
-                            sb.Append($"setRequired(\"{fieldName}\",true);\n");
+                            sb.Append($"setRequired(\"{targetName}\",true,\"{message}\");\n");
                             break;
                         case "Make not Required":
-                            sb.Append($"setRequired(\"{fieldName}\",false);\n");
+                            sb.Append($"setRequired(\"{targetName}\",false);\n");
                             break;
                         case "Prevent Past Date":
-                            sb.Append($"preventPastDate(\"{fieldName}\");\n");
+                            sb.Append($"blockPastDate(\"{targetName}\",\"{message}\");\n");
                             break;
                         case "Prevent Future Date":
-                            sb.Append($"preventFutureDate(\"{fieldName}\");\n");
+                            sb.Append($"blockFutureDate(\"{targetName}\",\"{message}\");\n");
                             break;
                         case "Show Section":
-                            sb.Append($"setSectionVisible(\"{fieldName}\",true);\n");
+                            sb.Append($"setSectionVisible(\"{targetName}\",true);\n");
                             break;
                         case "Hide Section":
-                            sb.Append($"setSectionVisible(\"{fieldName}\",false);\n");
+                            sb.Append($"setSectionVisible(\"{targetName}\",false);\n");
                             break;
                     }
                 }
@@ -190,5 +191,6 @@ namespace PortalBusinessRulesCustomizations
     {
         public string type { get; set; }
         public string target { get; set; }
+        public string message { get; set; }
     }
 }

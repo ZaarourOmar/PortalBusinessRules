@@ -65,19 +65,22 @@ namespace PortalBusinessRulesCustomizations
             string resultJs = generator.GenerateJavacript(operand1, operatorValue, operand2, "Text", positiveJson, negativeJson, ruleId);
 
            
-            EFCustomJS = ReplaceRuleIfNeeded(blockStart, blockEnd, EFCustomJS);
+            EFCustomJS = ReplaceRuleIfNeeded(tracingService, blockStart, blockEnd, EFCustomJS);
             ModifiedEFCustomJSOutput.Set(executionContext, EFCustomJS);
             AutomaticJsOutput.Set(executionContext, resultJs);
         }
 
-        private string ReplaceRuleIfNeeded(string blockStart, string blockEnd, string EFCustomJS)
+        private string ReplaceRuleIfNeeded(ITracingService tracingService, string blockStart, string blockEnd, string EFCustomJS)
         {
             if (!string.IsNullOrEmpty(EFCustomJS))
             {
                 int startingIndex = EFCustomJS.IndexOf(blockStart);
-                if (startingIndex > 0)
+                tracingService.Trace($"Starting Index={startingIndex}");
+                if (startingIndex >= 0)
                 {
                     int endIndex = EFCustomJS.IndexOf(blockEnd) + blockEnd.Length;
+                    tracingService.Trace($"End Index={endIndex}");
+                
                     if (endIndex - startingIndex > 0)
                     {
                        return EFCustomJS.Remove(startingIndex, endIndex - startingIndex - 1);
