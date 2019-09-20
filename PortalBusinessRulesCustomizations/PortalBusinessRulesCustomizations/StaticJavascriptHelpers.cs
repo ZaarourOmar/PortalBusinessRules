@@ -25,14 +25,22 @@ namespace PortalBusinessRulesCustomizations
         {
             return "function setReadOnly(e,n){for(var a=getArrayOfFieldNames(e),r=0;r<a.length;r++){var t=a[r];document.getElementById(t).readOnly=n?\"readonly\":\"\"}}";
         }
+
+        private static string GetHelperFunctions()
+        {
+            return "var elems=[];function saveElemDisplayType(e,l){for(var i=0;i<elems.length;i++){var s=elems[i];if(s.Id===(\"\"===e.id?l:e.id))return void(s.Display=e.style.display)}elems.push({Id:\"\"===e.id?l:e.id,Display:e.style.display})}function getPreviousDisplayValue(e,l){for(var i=0;i<elems.length;i++){var s=elems[i];if(s.Id===(\"\"===e.id?l:e.id))return s.Display}}function checkForLeftPadding(e,l,i,s){l&&\"none\"!==i.style.display?(saveElemDisplayType(i,e+\"_parentrow\"),i.style.display=\"none\"):0===s[0].offsetWidth&&0===s[0].offsetHeight&&null!==s[1]?s[1].style.paddingLeft=0:null!==s[1]&&(s[1].style.paddingLeft=\"20px\")}function getArrayOfFieldNames(e){var l=e;return\"string\"==typeof e&&(l=[]).push(e),l}";
+
+
+        }
         public static string GetAllHelperFunctions()
         {
             return "\n/*Start of Helper Functions*/" +
-                "\n" + GetFieldValueJS() + "\n" +
-                "\n" + SetVisibleJS() + "\n" +
-                "\n" + SetDisabledJS() + "\n" +
-                "\n" + SetReadOnlyJS() + "\n" +
-                $"\n/*End of Helper Functions*/\n";
+                 GetFieldValueJS() + "\n" +
+                 SetVisibleJS() + "\n" +
+                 SetDisabledJS() + "\n" +
+                 SetReadOnlyJS() + "\n" +
+                 GetHelperFunctions() + "\n" +
+                "\n/*End of Helper Functions*/\n";
         }
     }
 }

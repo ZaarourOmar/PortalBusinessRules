@@ -79,7 +79,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="JavascriptGeneratorWA.cs" />
-    <Compile Include="JavascriptGenerator.cs" />
+    <Compile Include="RuleJSGenerator.cs" />
+    <Compile Include="JSONConverter.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
