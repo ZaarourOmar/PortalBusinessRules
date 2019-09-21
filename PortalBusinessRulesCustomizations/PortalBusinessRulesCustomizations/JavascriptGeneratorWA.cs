@@ -51,31 +51,25 @@ namespace PortalBusinessRulesCustomizations
 
         protected override void Execute(CodeActivityContext executionContext)
         {
-            //Create the tracing service
             ITracingService tracingService = executionContext.GetExtension<ITracingService>();
-            //Create the context
             IWorkflowContext context = executionContext.GetExtension<IWorkflowContext>();
             IOrganizationServiceFactory serviceFactory = executionContext.GetExtension<IOrganizationServiceFactory>();
             IOrganizationService service = serviceFactory.CreateOrganizationService(context.UserId);
 
             string entityName = EntityNameInput.Get<string>(executionContext);
-            string operand1 = Operand1Input.Get<string>(executionContext);
-            string operand2 = Operand2Input.Get<string>(executionContext);
+            string operand1LogicalName = Operand1Input.Get<string>(executionContext);
+            string operand2Value = Operand2Input.Get<string>(executionContext);
             string operatorValue = OperatorInput.Get<string>(executionContext);
             string positiveJson = PositiveJsonInput.Get<string>(executionContext);
             string negativeJson = NegativeJsonInput.Get<string>(executionContext);
             string formCustomJS = EFCustomJSInput.Get<string>(executionContext);
             string ruleId = context.PrimaryEntityId.ToString();
-            string startBlock = $"//Start AutoJS({ruleId})\n";
-            string endBlock = $"//End AutoJS({ruleId})\n";
-
-
             try
             {
-                RuleJSGenerator generator = new RuleJSGenerator(tracingService, startBlock, endBlock);
-                AttributeTypeCode operand1Type = GetAttributeType(service, entityName, operand1);
-                string resultJs = generator.GenerateJavacript(operand1, operatorValue, operand2, operand1Type, positiveJson, negativeJson);
-                formCustomJS = ReplaceRuleIfNeeded(tracingService, startBlock, endBlock, formCustomJS);
+                RuleJSGenerator generator = new RuleJSGenerator(tracingService, ruleId);
+                AttributeTypeCode operand1Type = GetAttributeType(service, entityName, operand1LogicalName);
+                string resultJs = generator.GenerateJavacript(operand1LogicalName, operatorValue, operand2Value, operand1Type, positiveJson, negativeJson);
+                formCustomJS = ReplaceRuleIfNeeded(tracingService,generator.StartBlock,generator.EndBlock, formCustomJS);
                 FormJavascriptOutput.Set(executionContext, formCustomJS);
                 AutomaticJsOutput.Set(executionContext, resultJs);
             }
@@ -109,8 +103,7 @@ namespace PortalBusinessRulesCustomizations
             RetrieveAttributeResponse attributeResponse = service.Execute(attributeRequest) as RetrieveAttributeResponse;
             if (attributeResponse != null)
             {
-                AttributeTypeCode type = attributeResponse.AttributeMetadata.AttributeType.Value;
-                return type;
+                return attributeResponse.AttributeMetadata.AttributeType.Value;
             }
 
             throw new InvalidOperationException($"Failed to get the type of :{attributeName}");

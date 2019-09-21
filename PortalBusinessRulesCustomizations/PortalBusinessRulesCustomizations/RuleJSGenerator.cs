@@ -22,11 +22,11 @@ namespace PortalBusinessRulesCustomizations
         /// </summary>
         public string EndBlock { get; }
 
-        public RuleJSGenerator(ITracingService tracingService, string startBlock, string endBlock)
+        public RuleJSGenerator(ITracingService tracingService,string ruleId)
         {
             TracingService = tracingService;
-            StartBlock = startBlock;
-            EndBlock = endBlock;
+            StartBlock = $"//Start AutoJS({ruleId})\n";
+            EndBlock = $"//End AutoJS({ruleId})\n";
         }
 
         /// <summary>
