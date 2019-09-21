@@ -1,4 +1,6 @@
 ﻿using Microsoft.Xrm.Sdk;
+using Microsoft.Xrm.Sdk.Messages;
+using Microsoft.Xrm.Sdk.Metadata;
 using Microsoft.Xrm.Sdk.Workflow;
 using System;
 using System.Activities;
@@ -9,17 +11,19 @@ using System.Threading.Tasks;
 
 namespace PortalBusinessRulesCustomizations
 {
+    public enum OperandType
+    {
 
+    }
     public class JavascriptGeneratorWA : CodeActivity
     {
         #region Inputs/Outputs
-        //Define the properties
+        [RequiredArgument]
+        [Input("EntityName")]
+        public InArgument<string> EntityNameInput { get; set; }
         [RequiredArgument]
         [Input("Operand1")]
         public InArgument<string> Operand1Input { get; set; }
-
-        [Input("Operand1Type")]
-        public InArgument<string> Operand1TypeInput { get; set; }
         [RequiredArgument]
         [Input("Operator")]
         public InArgument<string> OperatorInput { get; set; }
@@ -39,7 +43,10 @@ namespace PortalBusinessRulesCustomizations
         public OutArgument<string> AutomaticJsOutput { get; set; }
 
         [Output("ModifiedEFCustomJS")]
-        public OutArgument<string> ModifiedEFCustomJSOutput { get; set; }
+        public OutArgument<string> FormJavascriptOutput { get; set; }
+
+        [Output("Error")]
+        public OutArgument<string> ErrorOutput { get; set; }
         #endregion
 
         protected override void Execute(CodeActivityContext executionContext)
@@ -51,47 +58,86 @@ namespace PortalBusinessRulesCustomizations
             IOrganizationServiceFactory serviceFactory = executionContext.GetExtension<IOrganizationServiceFactory>();
             IOrganizationService service = serviceFactory.CreateOrganizationService(context.UserId);
 
+            string entityName = EntityNameInput.Get<string>(executionContext);
             string operand1 = Operand1Input.Get<string>(executionContext);
-            string operand1Type = Operand1TypeInput.Get<string>(executionContext);
             string operand2 = Operand2Input.Get<string>(executionContext);
             string operatorValue = OperatorInput.Get<string>(executionContext);
             string positiveJson = PositiveJsonInput.Get<string>(executionContext);
             string negativeJson = NegativeJsonInput.Get<string>(executionContext);
-            string EFCustomJS = EFCustomJSInput.Get<string>(executionContext);
+            string formCustomJS = EFCustomJSInput.Get<string>(executionContext);
             string ruleId = context.PrimaryEntityId.ToString();
-            string blockStart = $"//Start AutoJS({ruleId})\n";
-            string blockEnd = $"//End AutoJS({ruleId})\n";
-            RuleJSGenerator generator = new RuleJSGenerator(blockStart,blockEnd);
-            string resultJs = generator.GenerateJavacript(operand1, operatorValue, operand2, "Text", positiveJson, negativeJson, ruleId);
+            string startBlock = $"//Start AutoJS({ruleId})\n";
+            string endBlock = $"//End AutoJS({ruleId})\n";
 
-           
-            EFCustomJS = ReplaceRuleIfNeeded(tracingService, blockStart, blockEnd, EFCustomJS);
-            ModifiedEFCustomJSOutput.Set(executionContext, EFCustomJS);
-            AutomaticJsOutput.Set(executionContext, resultJs);
+
+            try
+            {
+                RuleJSGenerator generator = new RuleJSGenerator(tracingService, startBlock, endBlock);
+                AttributeTypeCode operand1Type = GetAttributeType(service, entityName, operand1);
+                string resultJs = generator.GenerateJavacript(operand1, operatorValue, operand2, operand1Type, positiveJson, negativeJson);
+                formCustomJS = ReplaceRuleIfNeeded(tracingService, startBlock, endBlock, formCustomJS);
+                FormJavascriptOutput.Set(executionContext, formCustomJS);
+                AutomaticJsOutput.Set(executionContext, resultJs);
+            }
+            catch (InvalidOpreratorException operatorException)
+            {
+                tracingService.Trace(operatorException.Message);
+                AutomaticJsOutput.Set(executionContext, "");
+                ErrorOutput.Set(executionContext, operatorException.Message);
+            }
+            catch (InvalidOprerandValueException operandException)
+            {
+                tracingService.Trace(operandException.Message);
+                AutomaticJsOutput.Set(executionContext, "");
+                ErrorOutput.Set(executionContext, operandException.Message);
+            }
+            catch (Exception ex)
+            {
+                tracingService.Trace(ex.Message);
+                AutomaticJsOutput.Set(executionContext, "");
+                throw ex;
+            }
+
         }
 
-        private string ReplaceRuleIfNeeded(ITracingService tracingService, string blockStart, string blockEnd, string EFCustomJS)
+        private AttributeTypeCode GetAttributeType(IOrganizationService service, string entityName, string attributeName)
         {
-            if (!string.IsNullOrEmpty(EFCustomJS))
+            RetrieveAttributeRequest attributeRequest = new RetrieveAttributeRequest();
+            attributeRequest.EntityLogicalName = entityName;
+            attributeRequest.LogicalName = attributeName;
+            attributeRequest.RetrieveAsIfPublished = false;
+            RetrieveAttributeResponse attributeResponse = service.Execute(attributeRequest) as RetrieveAttributeResponse;
+            if (attributeResponse != null)
             {
-                int startingIndex = EFCustomJS.IndexOf(blockStart);
+                AttributeTypeCode type = attributeResponse.AttributeMetadata.AttributeType.Value;
+                return type;
+            }
+
+            throw new InvalidOperationException($"Failed to get the type of :{attributeName}");
+        }
+
+        private string ReplaceRuleIfNeeded(ITracingService tracingService, string startBlock, string endBlock, string formCustomJS)
+        {
+            if (!string.IsNullOrEmpty(formCustomJS))
+            {
+                int startingIndex = formCustomJS.IndexOf(startBlock);
                 tracingService.Trace($"Starting Index={startingIndex}");
                 if (startingIndex >= 0)
-                {
-                    int endIndex = EFCustomJS.IndexOf(blockEnd) + blockEnd.Length;
+                {;
+                    int endIndex = formCustomJS.IndexOf(endBlock) + endBlock.Length;
                     tracingService.Trace($"End Index={endIndex}");
-                
+
                     if (endIndex - startingIndex > 0)
                     {
-                       return EFCustomJS.Remove(startingIndex, endIndex - startingIndex - 1);
+                        return formCustomJS.Remove(startingIndex, endIndex - startingIndex - 1);
                     }
                 }
             }
 
-            return EFCustomJS;
+            return formCustomJS;
         }
 
-     
+
     }
 
 

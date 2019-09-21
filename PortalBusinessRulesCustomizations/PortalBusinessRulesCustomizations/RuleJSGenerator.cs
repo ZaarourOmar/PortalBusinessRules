@@ -1,4 +1,6 @@
-﻿using Newtonsoft.Json;
+﻿using Microsoft.Xrm.Sdk;
+using Microsoft.Xrm.Sdk.Metadata;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,24 +11,50 @@ namespace PortalBusinessRulesCustomizations
 {
     public class RuleJSGenerator
     {
-        public string BlockStart { get; }
-        public string BlockEnd { get; }
+        public ITracingService TracingService { get; }
 
-        public RuleJSGenerator(string blockStart, string blockEnd)
+        /// <summary>
+        /// StartBlock is a string the identifies the begining of the automatically generated Javascript
+        /// </summary>
+        public string StartBlock { get; }
+        /// <summary>
+        /// EndBlock is a string the identifies the end of the automaticall generated Javascript.
+        /// </summary>
+        public string EndBlock { get; }
+
+        public RuleJSGenerator(ITracingService tracingService, string startBlock, string endBlock)
         {
-            BlockStart = blockStart;
-            BlockEnd = blockEnd;
+            TracingService = tracingService;
+            StartBlock = startBlock;
+            EndBlock = endBlock;
         }
 
-        public string GenerateIfStatement(string operand1, string operatorValue, string operand2, string operandType)
+        /// <summary>
+        /// Based on the operand and operator types, generate the proper If statement.
+        /// </summary>
+        /// <param name="operand1"></param>
+        /// <param name="operatorValue"></param>
+        /// <param name="operand2"></param>
+        /// <param name="operand1Type"></param>
+        /// <returns></returns>
+        private string GenerateIfStatement(string operand1, string operatorValue, string operand2, AttributeTypeCode operand1Type)
         {
 
             string operatorSymbol = "";
             string ifStatement = "";
-            bool nonStringValue = operandType == "WholeNumber" || operandType == "Decimal" || operandType == "Boolean" || operandType == "Optionset";
+            bool nonStringOperand2Value = operand1Type == AttributeTypeCode.Double || operand1Type == AttributeTypeCode.BigInt || operand1Type == AttributeTypeCode.Boolean || operand1Type == AttributeTypeCode.Decimal || operand1Type == AttributeTypeCode.Integer || operand1Type == AttributeTypeCode.Picklist || operand1Type == AttributeTypeCode.Lookup;
+
+            if (nonStringOperand2Value)
+            {
+                if (!IsValidNonStringOperand(operand1Type, operand2))
+                {
+                    throw new InvalidOprerandValueException($"Error: Operand2: ({operand2}) doesn't match operand1 type: ({operand1Type})");
+                }
+            }
+
             switch (operatorValue)
             {
-                case "Equal" when nonStringValue:
+                case "Equal" when nonStringOperand2Value:
                     operatorSymbol = "==";
                     ifStatement = $"if (getFieldValue(\"{operand1}\") {operatorSymbol} {operand2})";
                     break;
@@ -36,7 +64,7 @@ namespace PortalBusinessRulesCustomizations
                     break;
 
 
-                case "Not Equal" when nonStringValue:
+                case "Not Equal" when nonStringOperand2Value:
                     operatorSymbol = "!=";
                     ifStatement = $"if (getFieldValue(\"{operand1}\") {operatorSymbol} {operand2})";
                     break;
@@ -46,7 +74,7 @@ namespace PortalBusinessRulesCustomizations
                     break;
 
 
-                case "Less Than" when nonStringValue:
+                case "Less Than" when nonStringOperand2Value:
                     operatorSymbol = "<";
                     ifStatement = $"if (getFieldValue(\"{operand1}\") {operatorSymbol} {operand2})";
                     break;
@@ -55,7 +83,7 @@ namespace PortalBusinessRulesCustomizations
                     break;
 
 
-                case "Less Than or Equal" when nonStringValue:
+                case "Less Than or Equal" when nonStringOperand2Value:
                     operatorSymbol = "<=";
                     ifStatement = $"if (getFieldValue(\"{operand1}\") {operatorSymbol} {operand2})";
                     break;
@@ -64,7 +92,7 @@ namespace PortalBusinessRulesCustomizations
                     break;
 
 
-                case "Greater Than" when nonStringValue:
+                case "Greater Than" when nonStringOperand2Value:
                     operatorSymbol = ">";
                     ifStatement = $"if (getFieldValue(\"{operand1}\") {operatorSymbol} {operand2})";
                     break;
@@ -73,7 +101,7 @@ namespace PortalBusinessRulesCustomizations
                     break;
 
 
-                case "Greater Than or Equal" when nonStringValue:
+                case "Greater Than or Equal" when nonStringOperand2Value:
                     operatorSymbol = ">=";
                     ifStatement = $"if (getFieldValue(\"{operand1}\") {operatorSymbol} {operand2})";
                     break;
@@ -89,55 +117,111 @@ namespace PortalBusinessRulesCustomizations
                 case "Contains No Data":
                     ifStatement = $"if (!Boolean(getFieldValue(\"{operand1}\")))";
                     break;
+
+                default:
+                    throw new InvalidOpreratorException("The passed operator is not recognized.");
             }
 
 
             return ifStatement;
         }
 
-
-        public string GenerateJavacript(string operand1, string operatorValue, string operand2, string operand1Type, string positiveJson, string negativeJson, string ruleId)
+        private bool IsValidNonStringOperand(AttributeTypeCode operand1Type, string operand2)
         {
-            string ifStatement = GenerateIfStatement(operand1, operatorValue, operand2, operand1Type);
-            string ifTrueBody = GenerateIfBody(positiveJson);
-            string ifFalseBody = GenerateIfBody(negativeJson);
+            bool valid = false;
 
-            string helperFunctions = StaticJavascriptHelpers.GetAllHelperFunctions();
+            switch (operand1Type)
+            {
+                case AttributeTypeCode.BigInt:
+                    Int64 bigIntResult;
+                    valid = Int64.TryParse(operand2, out bigIntResult);
+                    break;
+                case AttributeTypeCode.Boolean:
+                    bool boolResult;
+                    valid = bool.TryParse(operand2, out boolResult);
+                    break;
+                case AttributeTypeCode.Decimal:
+                    decimal decimalResult;
+                    valid = decimal.TryParse(operand2, out decimalResult);
+                    break;
+                case AttributeTypeCode.Double:
+                    double doubleResult;
+                    valid = double.TryParse(operand2, out doubleResult);
+                    break;
+                case AttributeTypeCode.Integer:
+                    int intResult;
+                    valid = int.TryParse(operand2, out intResult);
+                    break;
+                case AttributeTypeCode.Picklist:
+                    int optionSetResult;
+                    valid = int.TryParse(operand2, out optionSetResult);
+                    break;
+                case AttributeTypeCode.Lookup:
+                    Guid idResult; ;
+                    valid = Guid.TryParse(operand2, out idResult);
+                    break;
 
-            string finalOutput = ConstructFinalOutput(operand1, ifStatement, ifTrueBody, ifFalseBody, helperFunctions, ruleId);
+            }
 
-            return finalOutput;
-
+            return valid;
         }
 
-        private string ConstructFinalOutput(string operand1, string ifStatement, string ifTrueBody, string ifFalseBody, string helperFunctions, string ruleId)
+        /// <summary>
+        /// The entry point of the Rule JS generator. This function constructs the If statement and wraps it with a documentready function.
+        /// </summary>
+        /// <param name="operand1"></param>
+        /// <param name="operatorValue"></param>
+        /// <param name="operand2"></param>
+        /// <param name="operand1Type"></param>
+        /// <param name="positiveJson"></param>
+        /// <param name="negativeJson"></param>
+        /// <returns></returns>
+        public string GenerateJavacript(string operand1, string operatorValue, string operand2, AttributeTypeCode operand1Type, string positiveJson, string negativeJson)
+        {
+
+                string ifStatement = GenerateIfStatement(operand1, operatorValue, operand2, operand1Type);
+                string ifTrueBody = GenerateIfElseBody(positiveJson);
+                string ifFalseBody = GenerateIfElseBody(negativeJson);
+
+                string finalOutput = ConstructFinalOutput(operand1, ifStatement, ifTrueBody, ifFalseBody);
+
+                return finalOutput;
+           
+        }
+
+
+        /// <summary>
+        /// This function injects the if/else statement inside a document ready Jquery function and adds an onchange trigger. 
+        /// This will allow the logic to run on load and on change of the field (operand1)
+        /// </summary>
+        /// <param name="operand1"></param>
+        /// <param name="ifStatement"></param>
+        /// <param name="ifTrueBody"></param>
+        /// <param name="ifFalseBody"></param>
+        /// <param name="ruleId"></param>
+        /// <returns></returns>
+        private string ConstructFinalOutput(string operand1, string ifStatement, string ifTrueBody, string ifFalseBody)
         {
             StringBuilder sb = new StringBuilder();
             //start of the document
-            sb.Append(BlockStart);
+            sb.Append(StartBlock);
             sb.Append("$(document).ready(function() {\n");
-
-
 
             sb.Append($"$(\"#{operand1}\").change(function(){{\n");
             sb.Append($"{ifStatement}{{ \n{ifTrueBody} \n }} \n else {{ \n{ifFalseBody} \n }}\n");
-            sb.Append("});\n"); // end on change function
-            sb.Append($"$(\"#{operand1}\").change();\n"); // trigger the change event
-
+            sb.Append("});//end on change function\n");
+            sb.Append($"$(\"#{operand1}\").change();\n");
 
             //end of the document
-            sb.Append("});// end document ready\n"); // end document ready
-
-           // sb.Append($"\n{StaticJavascriptHelpers.GetAllHelperFunctions()}\n");
-
-            sb.Append(BlockEnd);
+            sb.Append("});// end document ready\n");
+            sb.Append(EndBlock);
 
 
 
             return sb.ToString();
         }
 
-        public string GenerateIfBody(string actionsJson)
+        public string GenerateIfElseBody(string actionsJson)
         {
             StringBuilder sb = new StringBuilder();
             JSONConverter<List<RuleAction>> converter = new JSONConverter<List<RuleAction>>();
