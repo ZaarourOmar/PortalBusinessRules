@@ -63,13 +63,14 @@ namespace PortalBusinessRulesCustomizations
             string positiveJson = PositiveJsonInput.Get<string>(executionContext);
             string negativeJson = NegativeJsonInput.Get<string>(executionContext);
             string formCustomJS = EFCustomJSInput.Get<string>(executionContext);
+
             string ruleId = context.PrimaryEntityId.ToString();
             try
             {
                 RuleJSGenerator generator = new RuleJSGenerator(tracingService, ruleId);
                 AttributeTypeCode operand1Type = GetAttributeType(service, entityName, operand1LogicalName);
                 string resultJs = generator.GenerateJavacript(operand1LogicalName, operatorValue, operand2Value, operand1Type, positiveJson, negativeJson);
-                formCustomJS = ReplaceRuleIfNeeded(tracingService,generator.StartBlock,generator.EndBlock, formCustomJS);
+                formCustomJS = CleanFormJSFromExistingRule(tracingService,generator.StartBlock,generator.EndBlock, formCustomJS);
                 FormJavascriptOutput.Set(executionContext, formCustomJS);
                 AutomaticJsOutput.Set(executionContext, resultJs);
             }
@@ -89,6 +90,7 @@ namespace PortalBusinessRulesCustomizations
             {
                 tracingService.Trace(ex.Message);
                 AutomaticJsOutput.Set(executionContext, "");
+                ErrorOutput.Set(executionContext, "An Error has happened, Please see the plugin trace for details");
                 throw ex;
             }
 
@@ -109,14 +111,21 @@ namespace PortalBusinessRulesCustomizations
             throw new InvalidOperationException($"Failed to get the type of :{attributeName}");
         }
 
-        private string ReplaceRuleIfNeeded(ITracingService tracingService, string startBlock, string endBlock, string formCustomJS)
+        private string CleanFormJSFromExistingRule(ITracingService tracingService, string startBlock, string endBlock, string formCustomJS)
         {
+            string injectedScriptString = "document.write(\"<script src='/portal-business-rules.js'></\"" + "+ \"script>\");";
+
             if (!string.IsNullOrEmpty(formCustomJS))
             {
+                if(!formCustomJS.Contains(injectedScriptString))
+                {
+                    formCustomJS = injectedScriptString + "\n" + formCustomJS;
+                }
+
                 int startingIndex = formCustomJS.IndexOf(startBlock);
                 tracingService.Trace($"Starting Index={startingIndex}");
                 if (startingIndex >= 0)
-                {;
+                {
                     int endIndex = formCustomJS.IndexOf(endBlock) + endBlock.Length;
                     tracingService.Trace($"End Index={endIndex}");
 

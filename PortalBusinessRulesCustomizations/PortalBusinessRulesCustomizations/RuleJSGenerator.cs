@@ -227,7 +227,7 @@ namespace PortalBusinessRulesCustomizations
             JSONConverter<List<RuleAction>> converter = new JSONConverter<List<RuleAction>>();
             try
             {
-                List<RuleAction> actions = converter.DeSerialize(actionsJson);
+                List<RuleAction> actions = converter.Deserialize(actionsJson);
                 foreach (RuleAction action in actions)
                 {
                     string targetName = action.target; // can be a section or a field

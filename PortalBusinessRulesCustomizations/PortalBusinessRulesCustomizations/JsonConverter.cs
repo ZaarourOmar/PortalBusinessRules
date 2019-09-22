@@ -26,7 +26,7 @@ namespace PortalBusinessRulesCustomizations
         /// <summary>
         /// DeSerializes an object from JSON
         /// </summary>
-        public  TType DeSerialize(string json)
+        public  TType Deserialize(string json)
         {
             using (var stream = new MemoryStream(Encoding.Default.GetBytes(json)))
             {
