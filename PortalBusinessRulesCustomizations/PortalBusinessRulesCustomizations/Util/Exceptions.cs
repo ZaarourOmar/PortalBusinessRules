@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace PortalBusinessRulesCustomizations
+namespace PortalBusinessRulesCustomizations.Util
 {
     public class InvalidOprerandValueException : Exception
     {

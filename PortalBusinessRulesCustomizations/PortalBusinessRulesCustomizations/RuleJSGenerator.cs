@@ -1,11 +1,9 @@
 ﻿using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Metadata;
-using Newtonsoft.Json;
+using PortalBusinessRulesCustomizations.Util;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace PortalBusinessRulesCustomizations
 {
@@ -14,19 +12,19 @@ namespace PortalBusinessRulesCustomizations
         public ITracingService TracingService { get; }
 
         /// <summary>
-        /// StartBlock is a string the identifies the begining of the automatically generated Javascript
+        /// StartBlock is a string that identifies the begining of the automatically generated Javascript
         /// </summary>
         public string StartBlock { get; }
         /// <summary>
-        /// EndBlock is a string the identifies the end of the automaticall generated Javascript.
+        /// EndBlock is a string that identifies the end of the automaticall generated Javascript.
         /// </summary>
         public string EndBlock { get; }
 
-        public RuleJSGenerator(ITracingService tracingService,string ruleId)
+        public RuleJSGenerator(ITracingService tracingService,Guid ruleId,string ruleName)
         {
             TracingService = tracingService;
-            StartBlock = $"//Start AutoJS({ruleId})\n";
-            EndBlock = $"//End AutoJS({ruleId})\n";
+            StartBlock = $"//Start AutoJS({ruleName}-{ruleId.ToString()})\n";
+            EndBlock = $"//End AutoJS({ruleName}-{ruleId.ToString()})\n";
         }
 
         /// <summary>
@@ -126,6 +124,12 @@ namespace PortalBusinessRulesCustomizations
             return ifStatement;
         }
 
+        /// <summary>
+        /// Determines if operand2 is of valid type based on operand1type. 
+        /// </summary>
+        /// <param name="operand1Type"></param>
+        /// <param name="operand2"></param>
+        /// <returns></returns>
         private bool IsValidNonStringOperand(AttributeTypeCode operand1Type, string operand2)
         {
             bool valid = false;
@@ -160,7 +164,6 @@ namespace PortalBusinessRulesCustomizations
                     Guid idResult; ;
                     valid = Guid.TryParse(operand2, out idResult);
                     break;
-
             }
 
             return valid;
@@ -211,17 +214,20 @@ namespace PortalBusinessRulesCustomizations
             sb.Append($"{ifStatement}{{ \n{ifTrueBody} \n }} \n else {{ \n{ifFalseBody} \n }}\n");
             sb.Append("});//end on change function\n");
             sb.Append($"$(\"#{operand1}\").change();\n");
-
             //end of the document
             sb.Append("});// end document ready\n");
             sb.Append(EndBlock);
-
-
-
             return sb.ToString();
         }
 
-        public string GenerateIfElseBody(string actionsJson)
+
+        /// <summary>
+        /// Generate a string out of the list of actions stored in the actionJson string.
+        /// Generates the proper javascript call based on the action type.
+        /// </summary>
+        /// <param name="actionsJson">A json array of the actions</param>
+        /// <returns></returns>
+        private string GenerateIfElseBody(string actionsJson)
         {
             StringBuilder sb = new StringBuilder();
             JSONConverter<List<RuleAction>> converter = new JSONConverter<List<RuleAction>>();

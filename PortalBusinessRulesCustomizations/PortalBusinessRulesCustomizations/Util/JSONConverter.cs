@@ -6,7 +6,7 @@ using System.Runtime.Serialization.Json;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace PortalBusinessRulesCustomizations
+namespace PortalBusinessRulesCustomizations.Util
 {
     public  class JSONConverter<TType> where TType : class
     {

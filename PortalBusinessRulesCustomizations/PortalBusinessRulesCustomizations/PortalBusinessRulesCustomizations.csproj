@@ -78,16 +78,19 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Exceptions.cs" />
+    <Compile Include="Util\Exceptions.cs" />
     <Compile Include="JavascriptGeneratorWA.cs" />
     <Compile Include="RuleJSGenerator.cs" />
-    <Compile Include="JSONConverter.cs" />
+    <Compile Include="Util\JSONConverter.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
     <None Include="key.snk" />
     <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="CRM Solutions\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
