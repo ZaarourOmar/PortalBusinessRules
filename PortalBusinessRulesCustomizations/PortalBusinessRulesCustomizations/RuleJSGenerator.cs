@@ -3,6 +3,7 @@ using Microsoft.Xrm.Sdk.Metadata;
 using PortalBusinessRulesCustomizations.Util;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace PortalBusinessRulesCustomizations
@@ -20,7 +21,7 @@ namespace PortalBusinessRulesCustomizations
         /// </summary>
         public string EndBlock { get; }
 
-        public RuleJSGenerator(ITracingService tracingService,Guid ruleId,string ruleName)
+        public RuleJSGenerator(ITracingService tracingService, Guid ruleId, string ruleName)
         {
             TracingService = tracingService;
             StartBlock = $"//Start AutoJS({ruleName}-{ruleId.ToString()})\n";
@@ -35,76 +36,68 @@ namespace PortalBusinessRulesCustomizations
         /// <param name="operand2"></param>
         /// <param name="operand1Type"></param>
         /// <returns></returns>
-        private string GenerateIfStatement(string operand1, string operatorValue, string operand2, AttributeTypeCode operand1Type)
+        private string GenerateIfStatement(string operand1, string operatorValue, string operand2, AttributeTypeCode operand1Type, string operand2ExpectedType)
         {
-
             string operatorSymbol = "";
             string ifStatement = "";
-            bool nonStringOperand2Value = operand1Type == AttributeTypeCode.Double || operand1Type == AttributeTypeCode.BigInt || operand1Type == AttributeTypeCode.Boolean || operand1Type == AttributeTypeCode.Decimal || operand1Type == AttributeTypeCode.Integer || operand1Type == AttributeTypeCode.Picklist || operand1Type == AttributeTypeCode.Lookup;
-
-            if (nonStringOperand2Value)
-            {
-                if (!IsValidNonStringOperand(operand1Type, operand2))
-                {
-                    throw new InvalidOprerandValueException($"Error: Operand2: ({operand2}) doesn't match operand1 type: ({operand1Type})");
-                }
-            }
-
             switch (operatorValue)
             {
-                case "Equal" when nonStringOperand2Value:
+                case "Equal" when operand2ExpectedType == "Number" && IsValidNumber(operand2):
                     operatorSymbol = "==";
                     ifStatement = $"if (getFieldValue(\"{operand1}\") {operatorSymbol} {operand2})";
                     break;
-                case "Equal":
+                case "Equal" when operand2ExpectedType == "Text":
                     operatorSymbol = "==";
                     ifStatement = $"if (getFieldValue(\"{operand1}\") {operatorSymbol} \"{operand2}\")";
                     break;
 
 
-                case "Not Equal" when nonStringOperand2Value:
+                case "Not Equal" when operand2ExpectedType == "Number" && IsValidNumber(operand2):
                     operatorSymbol = "!=";
                     ifStatement = $"if (getFieldValue(\"{operand1}\") {operatorSymbol} {operand2})";
                     break;
-                case "Not Equal":
+                case "Not Equal" when operand2ExpectedType == "Text":
                     operatorSymbol = "!=";
                     ifStatement = $"if (getFieldValue(\"{operand1}\") {operatorSymbol} \"{operand2}\")";
                     break;
 
 
-                case "Less Than" when nonStringOperand2Value:
+                case "Less Than" when operand2ExpectedType == "Number" && IsValidNumber(operand2):
                     operatorSymbol = "<";
                     ifStatement = $"if (getFieldValue(\"{operand1}\") {operatorSymbol} {operand2})";
                     break;
-                case "Less Than":
+                case "Less Than" when operand2ExpectedType == "Text":
                     operatorSymbol = "<";
+                    ifStatement = $"if (getFieldValue(\"{operand1}\") {operatorSymbol} \"{operand2}\")";
                     break;
 
 
-                case "Less Than or Equal" when nonStringOperand2Value:
+                case "Less Than or Equal" when operand2ExpectedType == "Number" && IsValidNumber(operand2):
                     operatorSymbol = "<=";
                     ifStatement = $"if (getFieldValue(\"{operand1}\") {operatorSymbol} {operand2})";
                     break;
-                case "Less Than or Equal":
+                case "Less Than or Equal" when operand2ExpectedType == "Text":
                     operatorSymbol = "<=";
+                    ifStatement = $"if (getFieldValue(\"{operand1}\") {operatorSymbol} \"{operand2}\")";
                     break;
 
 
-                case "Greater Than" when nonStringOperand2Value:
+                case "Greater Than" when operand2ExpectedType == "Number" && IsValidNumber(operand2):
                     operatorSymbol = ">";
                     ifStatement = $"if (getFieldValue(\"{operand1}\") {operatorSymbol} {operand2})";
                     break;
-                case "Greater Than":
+                case "Greater Than" when operand2ExpectedType == "Text":
                     operatorSymbol = ">";
+                    ifStatement = $"if (getFieldValue(\"{operand1}\") {operatorSymbol} \"{operand2}\")";
                     break;
 
-
-                case "Greater Than or Equal" when nonStringOperand2Value:
+                case "Greater Than or Equal" when operand2ExpectedType == "Number" && IsValidNumber(operand2):
                     operatorSymbol = ">=";
                     ifStatement = $"if (getFieldValue(\"{operand1}\") {operatorSymbol} {operand2})";
                     break;
-                case "Greater Than or Equal":
+                case "Greater Than or Equal" when operand2ExpectedType == "Text":
                     operatorSymbol = ">=";
+                    ifStatement = $"if (getFieldValue(\"{operand1}\") {operatorSymbol} \"{operand2}\")";
                     break;
 
 
@@ -117,58 +110,19 @@ namespace PortalBusinessRulesCustomizations
                     break;
 
                 default:
-                    throw new InvalidOpreratorException("The passed operator is not recognized.");
+                    throw new InvalidOprerandValueException("Operand 2 value is not formatted properly.");
             }
 
 
             return ifStatement;
         }
 
-        /// <summary>
-        /// Determines if operand2 is of valid type based on operand1type. 
-        /// </summary>
-        /// <param name="operand1Type"></param>
-        /// <param name="operand2"></param>
-        /// <returns></returns>
-        private bool IsValidNonStringOperand(AttributeTypeCode operand1Type, string operand2)
+        private bool IsValidNumber(string operand2)
         {
-            bool valid = false;
-
-            switch (operand1Type)
-            {
-                case AttributeTypeCode.BigInt:
-                    Int64 bigIntResult;
-                    valid = Int64.TryParse(operand2, out bigIntResult);
-                    break;
-                case AttributeTypeCode.Boolean:
-                    bool boolResult;
-                    valid = bool.TryParse(operand2, out boolResult);
-                    break;
-                case AttributeTypeCode.Decimal:
-                    decimal decimalResult;
-                    valid = decimal.TryParse(operand2, out decimalResult);
-                    break;
-                case AttributeTypeCode.Double:
-                    double doubleResult;
-                    valid = double.TryParse(operand2, out doubleResult);
-                    break;
-                case AttributeTypeCode.Integer:
-                    int intResult;
-                    valid = int.TryParse(operand2, out intResult);
-                    break;
-                case AttributeTypeCode.Picklist:
-                    int optionSetResult;
-                    valid = int.TryParse(operand2, out optionSetResult);
-                    break;
-                case AttributeTypeCode.Lookup:
-                    Guid idResult; ;
-                    valid = Guid.TryParse(operand2, out idResult);
-                    break;
-            }
-
-            return valid;
+            return operand2.All(char.IsNumber);
         }
 
+     
         /// <summary>
         /// The entry point of the Rule JS generator. This function constructs the If statement and wraps it with a documentready function.
         /// </summary>
@@ -179,17 +133,33 @@ namespace PortalBusinessRulesCustomizations
         /// <param name="positiveJson"></param>
         /// <param name="negativeJson"></param>
         /// <returns></returns>
-        public string GenerateJavacript(string operand1, string operatorValue, string operand2, AttributeTypeCode operand1Type, string positiveJson, string negativeJson)
+        public string GenerateJavacript(string operand1, string operatorValue, string operand2, AttributeTypeCode operand1Type, string operand2ExpectedType, string positiveJson, string negativeJson)
         {
+            try
+            {
 
-                string ifStatement = GenerateIfStatement(operand1, operatorValue, operand2, operand1Type);
+                string ifStatement = GenerateIfStatement(operand1, operatorValue, operand2, operand1Type, operand2ExpectedType);
                 string ifTrueBody = GenerateIfElseBody(positiveJson);
                 string ifFalseBody = GenerateIfElseBody(negativeJson);
 
                 string finalOutput = ConstructFinalOutput(operand1, ifStatement, ifTrueBody, ifFalseBody);
 
                 return finalOutput;
-           
+            }
+            catch (InvalidOpreratorException operatorException)
+            {
+                throw operatorException;
+            }
+            catch (InvalidOprerandValueException operandException)
+            {
+                throw operandException;
+            }
+            catch (Exception ex)
+            {
+              
+                throw ex;
+            }
+
         }
 
 
@@ -245,6 +215,15 @@ namespace PortalBusinessRulesCustomizations
                             break;
                         case "Hide Field":
                             sb.Append($"setVisible(\"{targetName}\",false);\n");
+                            break;
+                        case "Enable Field":
+                            sb.Append($"setDisabled(\"{targetName}\",true);\n");
+                            break;
+                        case "Disable Field":
+                            sb.Append($"setDisabled(\"{targetName}\",false);\n");
+                            break;
+                        case "Set Field Value":
+                            sb.Append($"setValue(\"{targetName}\",\"{message}\");\n");
                             break;
                         case "Make Required":
                             sb.Append($"setRequired(\"{targetName}\",true,\"{message}\");\n");
