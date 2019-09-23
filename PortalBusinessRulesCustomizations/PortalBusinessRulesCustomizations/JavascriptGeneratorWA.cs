@@ -119,7 +119,7 @@ namespace PortalBusinessRulesCustomizations
             {
                 if(!formCustomJS.Contains(injectedScriptString))
                 {
-                    formCustomJS = injectedScriptString + "\n" + formCustomJS;
+                    formCustomJS = injectedScriptString + formCustomJS;
                 }
 
                 int startingIndex = formCustomJS.IndexOf(startBlock);
