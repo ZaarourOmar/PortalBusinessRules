@@ -119,10 +119,10 @@ namespace PortalBusinessRulesCustomizations
 
         private bool IsValidNumber(string operand2)
         {
-            return operand2.All(char.IsNumber);
+            return operand2.All(char.IsNumber) || operand2 == "true" || operand2 == "false";
         }
 
-     
+
         /// <summary>
         /// The entry point of the Rule JS generator. This function constructs the If statement and wraps it with a documentready function.
         /// </summary>
@@ -156,7 +156,7 @@ namespace PortalBusinessRulesCustomizations
             }
             catch (Exception ex)
             {
-              
+
                 throw ex;
             }
 
@@ -242,6 +242,12 @@ namespace PortalBusinessRulesCustomizations
                             break;
                         case "Hide Section":
                             sb.Append($"setSectionVisible(\"{targetName}\",false);\n");
+                            break;
+                        case "Show Tab":
+                            sb.Append($"setTabVisible(\"{targetName}\",true);\n");
+                            break;
+                        case "Hide Tab":
+                            sb.Append($"setTabVisible(\"{targetName}\",false);\n");
                             break;
                     }
                 }
