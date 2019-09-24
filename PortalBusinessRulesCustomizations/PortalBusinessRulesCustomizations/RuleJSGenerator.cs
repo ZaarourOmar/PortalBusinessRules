@@ -40,62 +40,64 @@ namespace PortalBusinessRulesCustomizations
         {
             string operatorSymbol = "";
             string ifStatement = "";
+            string nonTextLabel = "Non Textual Value";
+            string textLabel = "Textual Value";
             switch (operatorValue)
             {
-                case "Equal" when operand2ExpectedType == "Number" && IsValidNumber(operand2):
+                case "Equal" when operand2ExpectedType == nonTextLabel && IsValidNumber(operand2):
                     operatorSymbol = "==";
                     ifStatement = $"if (getFieldValue(\"{operand1}\") {operatorSymbol} {operand2})";
                     break;
-                case "Equal" when operand2ExpectedType == "Text":
+                case "Equal" when operand2ExpectedType == textLabel:
                     operatorSymbol = "==";
                     ifStatement = $"if (getFieldValue(\"{operand1}\") {operatorSymbol} \"{operand2}\")";
                     break;
 
 
-                case "Not Equal" when operand2ExpectedType == "Number" && IsValidNumber(operand2):
+                case "Not Equal" when operand2ExpectedType == nonTextLabel && IsValidNumber(operand2):
                     operatorSymbol = "!=";
                     ifStatement = $"if (getFieldValue(\"{operand1}\") {operatorSymbol} {operand2})";
                     break;
-                case "Not Equal" when operand2ExpectedType == "Text":
+                case "Not Equal" when operand2ExpectedType == textLabel:
                     operatorSymbol = "!=";
                     ifStatement = $"if (getFieldValue(\"{operand1}\") {operatorSymbol} \"{operand2}\")";
                     break;
 
 
-                case "Less Than" when operand2ExpectedType == "Number" && IsValidNumber(operand2):
+                case "Less Than" when operand2ExpectedType == nonTextLabel && IsValidNumber(operand2):
                     operatorSymbol = "<";
                     ifStatement = $"if (getFieldValue(\"{operand1}\") {operatorSymbol} {operand2})";
                     break;
-                case "Less Than" when operand2ExpectedType == "Text":
+                case "Less Than" when operand2ExpectedType == textLabel:
                     operatorSymbol = "<";
                     ifStatement = $"if (getFieldValue(\"{operand1}\") {operatorSymbol} \"{operand2}\")";
                     break;
 
 
-                case "Less Than or Equal" when operand2ExpectedType == "Number" && IsValidNumber(operand2):
+                case "Less Than or Equal" when operand2ExpectedType == nonTextLabel && IsValidNumber(operand2):
                     operatorSymbol = "<=";
                     ifStatement = $"if (getFieldValue(\"{operand1}\") {operatorSymbol} {operand2})";
                     break;
-                case "Less Than or Equal" when operand2ExpectedType == "Text":
+                case "Less Than or Equal" when operand2ExpectedType == textLabel:
                     operatorSymbol = "<=";
                     ifStatement = $"if (getFieldValue(\"{operand1}\") {operatorSymbol} \"{operand2}\")";
                     break;
 
 
-                case "Greater Than" when operand2ExpectedType == "Number" && IsValidNumber(operand2):
+                case "Greater Than" when operand2ExpectedType == nonTextLabel && IsValidNumber(operand2):
                     operatorSymbol = ">";
                     ifStatement = $"if (getFieldValue(\"{operand1}\") {operatorSymbol} {operand2})";
                     break;
-                case "Greater Than" when operand2ExpectedType == "Text":
+                case "Greater Than" when operand2ExpectedType == textLabel:
                     operatorSymbol = ">";
                     ifStatement = $"if (getFieldValue(\"{operand1}\") {operatorSymbol} \"{operand2}\")";
                     break;
 
-                case "Greater Than or Equal" when operand2ExpectedType == "Number" && IsValidNumber(operand2):
+                case "Greater Than or Equal" when operand2ExpectedType == nonTextLabel && IsValidNumber(operand2):
                     operatorSymbol = ">=";
                     ifStatement = $"if (getFieldValue(\"{operand1}\") {operatorSymbol} {operand2})";
                     break;
-                case "Greater Than or Equal" when operand2ExpectedType == "Text":
+                case "Greater Than or Equal" when operand2ExpectedType == textLabel:
                     operatorSymbol = ">=";
                     ifStatement = $"if (getFieldValue(\"{operand1}\") {operatorSymbol} \"{operand2}\")";
                     break;
