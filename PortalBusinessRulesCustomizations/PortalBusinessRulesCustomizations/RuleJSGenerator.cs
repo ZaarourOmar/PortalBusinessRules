@@ -42,87 +42,170 @@ namespace PortalBusinessRulesCustomizations
             string ifStatement = "";
             string nonTextLabel = "Non Textual Value";
             string textLabel = "Textual Value";
+            string[] operand2Values = operand2.Split('^');
+            string operand2JsArray = "[" + String.Join(",", operand2Values) + "]";
+
             switch (operatorValue)
             {
-                case "Equal" when operand2ExpectedType == nonTextLabel && IsValidNumber(operand2):
+                case "Equal":
                     operatorSymbol = "==";
-                    ifStatement = $"if (getFieldValue(\"{operand1}\") {operatorSymbol} {operand2})";
                     break;
-                case "Equal" when operand2ExpectedType == textLabel:
-                    operatorSymbol = "==";
-                    ifStatement = $"if (getFieldValue(\"{operand1}\") {operatorSymbol} \"{operand2}\")";
-                    break;
-
-
-                case "Not Equal" when operand2ExpectedType == nonTextLabel && IsValidNumber(operand2):
+                case "Not Equal":
                     operatorSymbol = "!=";
-                    ifStatement = $"if (getFieldValue(\"{operand1}\") {operatorSymbol} {operand2})";
                     break;
-                case "Not Equal" when operand2ExpectedType == textLabel:
-                    operatorSymbol = "!=";
-                    ifStatement = $"if (getFieldValue(\"{operand1}\") {operatorSymbol} \"{operand2}\")";
-                    break;
-
-
-                case "Less Than" when operand2ExpectedType == nonTextLabel && IsValidNumber(operand2):
+                case "Less Than":
                     operatorSymbol = "<";
-                    ifStatement = $"if (getFieldValue(\"{operand1}\") {operatorSymbol} {operand2})";
                     break;
-                case "Less Than" when operand2ExpectedType == textLabel:
-                    operatorSymbol = "<";
-                    ifStatement = $"if (getFieldValue(\"{operand1}\") {operatorSymbol} \"{operand2}\")";
-                    break;
-
-
-                case "Less Than or Equal" when operand2ExpectedType == nonTextLabel && IsValidNumber(operand2):
+                case "Less Than or Equal":
                     operatorSymbol = "<=";
-                    ifStatement = $"if (getFieldValue(\"{operand1}\") {operatorSymbol} {operand2})";
                     break;
-                case "Less Than or Equal" when operand2ExpectedType == textLabel:
-                    operatorSymbol = "<=";
-                    ifStatement = $"if (getFieldValue(\"{operand1}\") {operatorSymbol} \"{operand2}\")";
-                    break;
-
-
-                case "Greater Than" when operand2ExpectedType == nonTextLabel && IsValidNumber(operand2):
+                case "Greater Than":
                     operatorSymbol = ">";
-                    ifStatement = $"if (getFieldValue(\"{operand1}\") {operatorSymbol} {operand2})";
                     break;
-                case "Greater Than" when operand2ExpectedType == textLabel:
-                    operatorSymbol = ">";
-                    ifStatement = $"if (getFieldValue(\"{operand1}\") {operatorSymbol} \"{operand2}\")";
-                    break;
-
-                case "Greater Than or Equal" when operand2ExpectedType == nonTextLabel && IsValidNumber(operand2):
+                case "Greater Than or Equal":
                     operatorSymbol = ">=";
-                    ifStatement = $"if (getFieldValue(\"{operand1}\") {operatorSymbol} {operand2})";
                     break;
-                case "Greater Than or Equal" when operand2ExpectedType == textLabel:
-                    operatorSymbol = ">=";
-                    ifStatement = $"if (getFieldValue(\"{operand1}\") {operatorSymbol} \"{operand2}\")";
-                    break;
-
-
                 case "Contains Data":
                     ifStatement = $"if (Boolean(getFieldValue(\"{operand1}\")))";
-                    break;
-
+                    return ifStatement;
                 case "Contains No Data":
                     ifStatement = $"if (!Boolean(getFieldValue(\"{operand1}\")))";
-                    break;
+                    return ifStatement;
+                case "In":
+                    operand2JsArray = GenerateJSArray(operand2, true);
+                    ifStatement = $"if ({operand2JsArray}.includes(getFieldValue(\"{operand1}\")))";
+                    return ifStatement;
+                case "Not In":
+                    operand2JsArray = GenerateJSArray(operand2, true);
+                    ifStatement = $"if (!{operand2JsArray}.includes(getFieldValue(\"{operand1}\")))";
+                    return ifStatement;
 
                 default:
                     throw new InvalidOprerandValueException("Operand 2 value is not formatted properly.");
             }
 
+            if (operand1Type == AttributeTypeCode.DateTime)
+            {
+                //make sure operand 2 is valid date
+                DateTime result;
+                if (DateTime.TryParse(operand2, out result))
+                {
+
+                }
+            }
+            else if (operand1Type == AttributeTypeCode.Boolean)
+            {
+                bool result;
+                if (bool.TryParse(operand2, out result))
+                {
+                    ifStatement = $"if (getFieldValue(\"{operand1}\") {operatorSymbol} {operand2})";
+                }
+                else
+                {
+                    throw new InvalidOprerandValueException("Operand 2 Should be a boolean (true or false)");
+                }
+            }
+            else if (operand1Type == AttributeTypeCode.Integer)
+            {
+                int result;
+                if (int.TryParse(operand2, out result))
+                {
+                    ifStatement = $"if (getFieldValue(\"{operand1}\") {operatorSymbol} {operand2})";
+                }
+                else
+                {
+                    throw new InvalidOprerandValueException("Operand 2 Should be an integer");
+                }
+            }
+            else if (operand1Type == AttributeTypeCode.Double)
+            {
+                double result;
+                if (double.TryParse(operand2, out result))
+                {
+                    ifStatement = $"if (getFieldValue(\"{operand1}\") {operatorSymbol} {operand2})";
+                }
+                else
+                {
+                    throw new InvalidOprerandValueException("Operand 2 Should be an double");
+                }
+            }
+            else if (operand1Type == AttributeTypeCode.Decimal)
+            {
+                decimal result;
+                if (decimal.TryParse(operand2, out result))
+                {
+                    ifStatement = $"if (getFieldValue(\"{operand1}\") {operatorSymbol} {operand2})";
+                }
+                else
+                {
+                    throw new InvalidOprerandValueException("Operand 2 Should be decimal");
+                }
+            }
+            else if (operand1Type == AttributeTypeCode.Lookup)
+            {
+                Guid result;
+                if (Guid.TryParse(operand2, out result))
+                {
+                    ifStatement = $"if (getFieldValue(\"{operand1}\") {operatorSymbol} \"{operand2}\")";
+                }
+                else
+                {
+                    throw new InvalidOprerandValueException("Operand 2 Should be a GUID");
+                }
+            }
+            else if (operand1Type == AttributeTypeCode.Picklist)
+            {
+                int result;
+                if (int.TryParse(operand2, out result))
+                {
+                    ifStatement = $"if (getFieldValue(\"{operand1}\") {operatorSymbol} {operand2})";
+                }
+                else
+                {
+                    throw new InvalidOprerandValueException("Operand 2 Should be the integer value of the option");
+                }
+            }
+            else if (operand1Type == AttributeTypeCode.Memo ||operand1Type== AttributeTypeCode.String)
+            {
+                ifStatement = $"if (getFieldValue(\"{operand1}\") {operatorSymbol} \"{operand2}\")";
+            }
+
+
 
             return ifStatement;
         }
 
-        private bool IsValidNumber(string operand2)
+        private string GenerateIfStatementBasedOnType(string operand1, string operatorValue, string operand2)
+        {
+            throw new NotImplementedException();
+        }
+
+        private string GenerateJSArray(string operand2, bool textualValues)
+        {
+            string[] values = operand2.Split('^');
+            StringBuilder sb = new StringBuilder();
+            sb.Append("[");
+            foreach (string s in values)
+            {
+                if (textualValues)
+                {
+                    sb.Append($"\"{s}\",");
+                }
+                else
+                {
+                    sb.Append($"{s},");
+                }
+            }
+            sb.Append("]");
+            return sb.ToString();
+
+        }
+
+        private bool IsValidNonString(string operand2)
         {
             return operand2.All(char.IsNumber) || operand2 == "true" || operand2 == "false";
         }
+
 
 
         /// <summary>
