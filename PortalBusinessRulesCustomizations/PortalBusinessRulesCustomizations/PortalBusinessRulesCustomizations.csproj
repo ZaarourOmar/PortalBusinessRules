@@ -78,6 +78,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="JavascriptGeneratorPlugin.cs" />
     <Compile Include="Util\Exceptions.cs" />
     <Compile Include="JavascriptGeneratorWA.cs" />
     <Compile Include="RuleJSGenerator.cs" />
@@ -91,6 +92,7 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="CRM Solutions\" />
+    <Folder Include="Icons\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

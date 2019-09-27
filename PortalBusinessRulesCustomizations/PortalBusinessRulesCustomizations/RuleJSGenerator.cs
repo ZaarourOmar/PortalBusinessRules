@@ -1,4 +1,5 @@
 ﻿using Microsoft.Xrm.Sdk;
+using Microsoft.Xrm.Sdk.Messages;
 using Microsoft.Xrm.Sdk.Metadata;
 using PortalBusinessRulesCustomizations.Util;
 using System;
@@ -11,22 +12,27 @@ namespace PortalBusinessRulesCustomizations
     public class RuleJSGenerator
     {
         public ITracingService TracingService { get; }
+        public IOrganizationService Service { get; }
 
+        public string EntityName { get; set; }
         /// <summary>
         /// StartBlock is a string that identifies the begining of the automatically generated Javascript
         /// </summary>
-        public string StartBlock { get; }
+        public string CurrentRuleStartBlock { get; }
         /// <summary>
         /// EndBlock is a string that identifies the end of the automaticall generated Javascript.
         /// </summary>
-        public string EndBlock { get; }
+        public string CurrentRuleEndBlock { get; }
 
-        public RuleJSGenerator(ITracingService tracingService, Guid ruleId, string ruleName)
+        public RuleJSGenerator(IOrganizationService service, ITracingService tracingService, string entityName, Guid ruleId, string ruleName)
         {
             TracingService = tracingService;
-            StartBlock = $"//Start AutoJS({ruleName}-{ruleId.ToString()})\n";
-            EndBlock = $"//End AutoJS({ruleName}-{ruleId.ToString()})\n";
+            Service = service;
+            EntityName = entityName;
+            CurrentRuleStartBlock = $"//Start AutoJS({ruleName}-{ruleId.ToString()})\n";
+            CurrentRuleEndBlock = $"//End AutoJS({ruleName}-{ruleId.ToString()})\n";
         }
+
 
         /// <summary>
         /// Based on the operand and operator types, generate the proper If statement.
@@ -36,52 +42,50 @@ namespace PortalBusinessRulesCustomizations
         /// <param name="operand2"></param>
         /// <param name="operand1Type"></param>
         /// <returns></returns>
-        private string GenerateIfStatement(string operand1, string operatorValue, string operand2, AttributeTypeCode operand1Type, string operand2ExpectedType)
+        private string GenerateIfStatement(string operand1, int operatorValue, string operand2, AttributeTypeCode operand1Type)
         {
             string operatorSymbol = "";
             string ifStatement = "";
-            string nonTextLabel = "Non Textual Value";
-            string textLabel = "Textual Value";
             string[] operand2Values = operand2.Split('^');
-            string operand2JsArray = "[" + String.Join(",", operand2Values) + "]";
+            string operand2JsArray;
 
             switch (operatorValue)
             {
-                case "Equal":
+                case 497060000:
                     operatorSymbol = "==";
                     break;
-                case "Not Equal":
+                case 497060001:
                     operatorSymbol = "!=";
                     break;
-                case "Less Than":
+                case 497060002:
                     operatorSymbol = "<";
                     break;
-                case "Less Than or Equal":
+                case 497060006:
                     operatorSymbol = "<=";
                     break;
-                case "Greater Than":
+                case 497060003:
                     operatorSymbol = ">";
                     break;
-                case "Greater Than or Equal":
+                case 497060004:
                     operatorSymbol = ">=";
                     break;
-                case "Contains Data":
-                    ifStatement = $"if (Boolean(getFieldValue(\"{operand1}\")))";
+                case 497060005: // contains
+                    ifStatement = $"if (Boolean(getFieldValue(\"{operand1}\")) &&getFieldValue(\"{operand1}\")!=\"\" )";
                     return ifStatement;
-                case "Contains No Data":
+                case 497060007: // doesn't contain
                     ifStatement = $"if (!Boolean(getFieldValue(\"{operand1}\")))";
                     return ifStatement;
-                case "In":
+                case 497060008: //in
                     operand2JsArray = GenerateJSArray(operand2, true);
                     ifStatement = $"if ({operand2JsArray}.includes(getFieldValue(\"{operand1}\")))";
                     return ifStatement;
-                case "Not In":
+                case 497060009: // not in
                     operand2JsArray = GenerateJSArray(operand2, true);
                     ifStatement = $"if (!{operand2JsArray}.includes(getFieldValue(\"{operand1}\")))";
                     return ifStatement;
 
                 default:
-                    throw new InvalidOprerandValueException("Operand 2 value is not formatted properly.");
+                    throw new Exception("Operand 2 value is not formatted properly.");
             }
 
             if (operand1Type == AttributeTypeCode.DateTime)
@@ -90,19 +94,25 @@ namespace PortalBusinessRulesCustomizations
                 DateTime result;
                 if (DateTime.TryParse(operand2, out result))
                 {
-
+                    string date1 = $"new Date(getFieldValue(\"{operand1}\"))";
+                    string date2 = $"new Date(\"{operand2}\")";
+                    ifStatement = $"if ({date1} {operatorSymbol} {date2})";
+                }
+                else
+                {
+                    throw new Exception("Operand 2 Should be a formatted as a datetime");
                 }
             }
             else if (operand1Type == AttributeTypeCode.Boolean)
             {
                 bool result;
-                if (bool.TryParse(operand2, out result))
+                if (bool.TryParse(operand2, out result) || operand2 == "1" || operand2 == "0")
                 {
                     ifStatement = $"if (getFieldValue(\"{operand1}\") {operatorSymbol} {operand2})";
                 }
                 else
                 {
-                    throw new InvalidOprerandValueException("Operand 2 Should be a boolean (true or false)");
+                    throw new Exception("Operand 2 Should be a boolean (true or false)");
                 }
             }
             else if (operand1Type == AttributeTypeCode.Integer)
@@ -114,7 +124,7 @@ namespace PortalBusinessRulesCustomizations
                 }
                 else
                 {
-                    throw new InvalidOprerandValueException("Operand 2 Should be an integer");
+                    throw new Exception("Operand 2 Should be an integer");
                 }
             }
             else if (operand1Type == AttributeTypeCode.Double)
@@ -126,7 +136,7 @@ namespace PortalBusinessRulesCustomizations
                 }
                 else
                 {
-                    throw new InvalidOprerandValueException("Operand 2 Should be an double");
+                    throw new Exception("Operand 2 Should be an double");
                 }
             }
             else if (operand1Type == AttributeTypeCode.Decimal)
@@ -138,7 +148,7 @@ namespace PortalBusinessRulesCustomizations
                 }
                 else
                 {
-                    throw new InvalidOprerandValueException("Operand 2 Should be decimal");
+                    throw new Exception("Operand 2 Should be decimal");
                 }
             }
             else if (operand1Type == AttributeTypeCode.Lookup)
@@ -150,7 +160,7 @@ namespace PortalBusinessRulesCustomizations
                 }
                 else
                 {
-                    throw new InvalidOprerandValueException("Operand 2 Should be a GUID");
+                    throw new Exception("Operand 2 Should be a GUID");
                 }
             }
             else if (operand1Type == AttributeTypeCode.Picklist)
@@ -162,10 +172,10 @@ namespace PortalBusinessRulesCustomizations
                 }
                 else
                 {
-                    throw new InvalidOprerandValueException("Operand 2 Should be the integer value of the option");
+                    throw new Exception("Operand 2 Should be the integer value of the option");
                 }
             }
-            else if (operand1Type == AttributeTypeCode.Memo ||operand1Type== AttributeTypeCode.String)
+            else if (operand1Type == AttributeTypeCode.Memo || operand1Type == AttributeTypeCode.String)
             {
                 ifStatement = $"if (getFieldValue(\"{operand1}\") {operatorSymbol} \"{operand2}\")";
             }
@@ -173,11 +183,6 @@ namespace PortalBusinessRulesCustomizations
 
 
             return ifStatement;
-        }
-
-        private string GenerateIfStatementBasedOnType(string operand1, string operatorValue, string operand2)
-        {
-            throw new NotImplementedException();
         }
 
         private string GenerateJSArray(string operand2, bool textualValues)
@@ -218,30 +223,22 @@ namespace PortalBusinessRulesCustomizations
         /// <param name="positiveJson"></param>
         /// <param name="negativeJson"></param>
         /// <returns></returns>
-        public string GenerateJavacript(string operand1, string operatorValue, string operand2, AttributeTypeCode operand1Type, string operand2ExpectedType, string positiveJson, string negativeJson)
+        public string GenerateJavacript(string operand1, int operatorValue, string operand2, AttributeTypeCode operand1Type, string positiveJson, string negativeJson)
         {
             try
             {
 
-                string ifStatement = GenerateIfStatement(operand1, operatorValue, operand2, operand1Type, operand2ExpectedType);
-                string ifTrueBody = GenerateIfElseBody(positiveJson);
-                string ifFalseBody = GenerateIfElseBody(negativeJson);
-
-                string finalOutput = ConstructFinalOutput(operand1, ifStatement, ifTrueBody, ifFalseBody);
+                string ifStatement = GenerateIfStatement(operand1, operatorValue, operand2, operand1Type);
+                string ifTrueBody = GenerateIfElseBody(positiveJson, operand1Type);
+                string ifFalseBody = GenerateIfElseBody(negativeJson, operand1Type);
+            
+                string finalOutput = ConstructFinalOutput(operand1, operand1Type, ifStatement, ifTrueBody, ifFalseBody);
 
                 return finalOutput;
             }
-            catch (InvalidOpreratorException operatorException)
-            {
-                throw operatorException;
-            }
-            catch (InvalidOprerandValueException operandException)
-            {
-                throw operandException;
-            }
+           
             catch (Exception ex)
             {
-
                 throw ex;
             }
 
@@ -258,20 +255,32 @@ namespace PortalBusinessRulesCustomizations
         /// <param name="ifFalseBody"></param>
         /// <param name="ruleId"></param>
         /// <returns></returns>
-        private string ConstructFinalOutput(string operand1, string ifStatement, string ifTrueBody, string ifFalseBody)
+        private string ConstructFinalOutput(string operand1, AttributeTypeCode operand1Type, string ifStatement, string ifTrueBody, string ifFalseBody)
         {
             StringBuilder sb = new StringBuilder();
-            //start of the document
-            sb.Append(StartBlock);
-            sb.Append("$(document).ready(function() {\n");
+            sb.Append(CurrentRuleStartBlock);
+            if (operand1Type == AttributeTypeCode.DateTime)
+            {
+                sb.Append($"$(\"#{operand1}\").parent().on(\"dp.change\",function(){{\n");
 
-            sb.Append($"$(\"#{operand1}\").change(function(){{\n");
+            }
+            else
+            {
+                sb.Append($"$(\"#{operand1}\").change(function(){{\n");
+            }
+
             sb.Append($"{ifStatement}{{ \n{ifTrueBody} \n }} \n else {{ \n{ifFalseBody} \n }}\n");
             sb.Append("});//end on change function\n");
-            sb.Append($"$(\"#{operand1}\").change();\n");
-            //end of the document
-            sb.Append("});// end document ready\n");
-            sb.Append(EndBlock);
+
+            if (operand1Type == AttributeTypeCode.DateTime)
+            {
+                sb.Append($"$(\"#{operand1}\").parent().trigger(\"dp.change\");\n");
+            }
+            else
+            {
+                sb.Append($"$(\"#{operand1}\").change();\n");
+            }
+            sb.Append(CurrentRuleEndBlock);
             return sb.ToString();
         }
 
@@ -282,7 +291,7 @@ namespace PortalBusinessRulesCustomizations
         /// </summary>
         /// <param name="actionsJson">A json array of the actions</param>
         /// <returns></returns>
-        private string GenerateIfElseBody(string actionsJson)
+        private string GenerateIfElseBody(string actionsJson, AttributeTypeCode operand1Type)
         {
             StringBuilder sb = new StringBuilder();
             JSONConverter<List<RuleAction>> converter = new JSONConverter<List<RuleAction>>();
@@ -293,6 +302,8 @@ namespace PortalBusinessRulesCustomizations
                 {
                     string targetName = action.target; // can be a section or a field
                     string message = action.message;
+                    string value = action.value;
+
                     switch (action.type)
                     {
                         case "Show Field":
@@ -302,14 +313,24 @@ namespace PortalBusinessRulesCustomizations
                             sb.Append($"setVisible(\"{targetName}\",false);\n");
                             break;
                         case "Enable Field":
-                            sb.Append($"setDisabled(\"{targetName}\",true);\n");
-                            break;
-                        case "Disable Field":
                             sb.Append($"setDisabled(\"{targetName}\",false);\n");
                             break;
-                        case "Set Field Value":
-                            sb.Append($"setValue(\"{targetName}\",\"{message}\");\n");
+                        case "Disable Field":
+                            sb.Append($"setDisabled(\"{targetName}\",true);\n");
                             break;
+                        case "Set Field Value":
+                            AttributeTypeCode actionTargetType = GetAttributeType(Service, EntityName, targetName);
+                            bool nonTextualValue = actionTargetType == AttributeTypeCode.Picklist || actionTargetType == AttributeTypeCode.Boolean || actionTargetType == AttributeTypeCode.Money || actionTargetType == AttributeTypeCode.Integer || actionTargetType == AttributeTypeCode.Double || actionTargetType == AttributeTypeCode.Decimal;
+                            if (nonTextualValue)
+                            {
+                                sb.Append($"setValue(\"{targetName}\",{value});\n");
+                            }
+                            else
+                            {
+                                sb.Append($"setValue(\"{targetName}\",\"{value}\");\n");
+                            }
+                            break;
+
                         case "Make Required":
                             sb.Append($"setRequired(\"{targetName}\",true,\"{message}\");\n");
                             break;
@@ -344,13 +365,28 @@ namespace PortalBusinessRulesCustomizations
 
             return sb.ToString();
         }
+        private AttributeTypeCode GetAttributeType(IOrganizationService service, string entityName, string attributeName)
+        {
+            RetrieveAttributeRequest attributeRequest = new RetrieveAttributeRequest();
+            attributeRequest.EntityLogicalName = entityName;
+            attributeRequest.LogicalName = attributeName;
+            attributeRequest.RetrieveAsIfPublished = false;
+            RetrieveAttributeResponse attributeResponse = service.Execute(attributeRequest) as RetrieveAttributeResponse;
+            if (attributeResponse != null)
+            {
+                return attributeResponse.AttributeMetadata.AttributeType.Value;
+            }
 
+            throw new InvalidOperationException($"Failed to get the type of :{attributeName}");
+        }
     }
+
 
     public class RuleAction
     {
         public string type { get; set; }
         public string target { get; set; }
+        public string value { get; set; }
         public string message { get; set; }
     }
 }

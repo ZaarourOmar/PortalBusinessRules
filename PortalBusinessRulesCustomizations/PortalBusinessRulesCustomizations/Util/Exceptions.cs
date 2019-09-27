@@ -6,17 +6,17 @@ using System.Threading.Tasks;
 
 namespace PortalBusinessRulesCustomizations.Util
 {
-    public class InvalidOprerandValueException : Exception
-    {
-        public InvalidOprerandValueException(string message) : base(message)
-        {
-        }
-    }
+    //public class InvalidOprerandValueException : Exception
+    //{
+    //    public InvalidOprerandValueException(string message) : base(message)
+    //    {
+    //    }
+    //}
 
-    public class InvalidOpreratorException : Exception
-    {
-        public InvalidOpreratorException(string message) : base(message)
-        {
-        }
-    }
+    //public class InvalidOpreratorException : Exception
+    //{
+    //    public InvalidOpreratorException(string message) : base(message)
+    //    {
+    //    }
+    //}
 }
