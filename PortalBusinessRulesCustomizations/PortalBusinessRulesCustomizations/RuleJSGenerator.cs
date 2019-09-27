@@ -223,11 +223,11 @@ namespace PortalBusinessRulesCustomizations
         /// <param name="positiveJson"></param>
         /// <param name="negativeJson"></param>
         /// <returns></returns>
-        public string GenerateJavacript(string operand1, int operatorValue, string operand2, AttributeTypeCode operand1Type, string positiveJson, string negativeJson)
+        public string GenerateJavacript(string operand1, int operatorValue, string operand2, string positiveJson, string negativeJson)
         {
             try
             {
-
+                AttributeTypeCode operand1Type = GetAttributeType(Service, EntityName, operand1);
                 string ifStatement = GenerateIfStatement(operand1, operatorValue, operand2, operand1Type);
                 string ifTrueBody = GenerateIfElseBody(positiveJson, operand1Type);
                 string ifFalseBody = GenerateIfElseBody(negativeJson, operand1Type);
