@@ -29,60 +29,45 @@ namespace PortalBusinessRulesCustomizations
             ITracingService tracingService = (ITracingService)serviceProvider.GetService(typeof(ITracingService));
             IOrganizationServiceFactory serviceFactory = (IOrganizationServiceFactory)serviceProvider.GetService(typeof(IOrganizationServiceFactory));
             IOrganizationService service = serviceFactory.CreateOrganizationService(context.UserId);
-            //triggered upon delete message
+            EntityReference entityFormReference = null;
+            EntityReference webFormStepReference = null;
+            message = context.MessageName.ToLower();
+            Guid currentRecordId = Guid.Empty;
+            string currentRecordLogicalName = "";
+            string customJavascript = "";
+            EntityCollection allBusinessRules = new EntityCollection();
+            Entity entityForm = null;
+            Entity webFormStep = null;
 
-            //if (context.Depth > 2) return;
 
-            Guid targetId = Guid.Empty;
-            string targetLogicalName = "";
-            if (context.InputParameters.Contains("Target"))
+            if (message == "delete")
             {
-                if (context.MessageName.ToLower() == "delete")
-                {
-                    message = "delete";
-                    targetId = (context.InputParameters["Target"] as EntityReference).Id;
-                    targetLogicalName = (context.InputParameters["Target"] as EntityReference).LogicalName;
-                }
-                else if (context.InputParameters.Contains("Target") && context.InputParameters["Target"] is Entity)
-                {
-                    targetId = (context.InputParameters["Target"] as Entity).Id;
-                    targetLogicalName = (context.InputParameters["Target"] as Entity).LogicalName;
-                }
-                else
-                {
-                    tracingService.Trace("Not known entity");
-                    return;
-                }
+                var preImageEntity = (context.PreEntityImages != null && context.PreEntityImages.Contains("PreImage")) ? context.PreEntityImages["PreImage"] : null;
+                entityFormReference = preImageEntity != null ? preImageEntity.GetAttributeValue<EntityReference>("t365_entityform") : null;
+                webFormStepReference = preImageEntity != null ? preImageEntity.GetAttributeValue<EntityReference>("t365_webformstep") : null;
+                currentRecordId = preImageEntity != null ? preImageEntity.Id : Guid.Empty;
+                currentRecordLogicalName = preImageEntity != null ? preImageEntity.LogicalName : "";
+            }
+            else
+            {
+                var postImageEntity = (context.PostEntityImages != null && context.PostEntityImages.Contains("PostImage")) ? context.PostEntityImages["PostImage"] : null;
+                entityFormReference = postImageEntity != null ? postImageEntity.GetAttributeValue<EntityReference>("t365_entityform") : null;
+                webFormStepReference = postImageEntity != null ? postImageEntity.GetAttributeValue<EntityReference>("t365_webformstep") : null;
+                currentRecordId = postImageEntity != null ? postImageEntity.Id : Guid.Empty;
+                currentRecordLogicalName = postImageEntity != null ? postImageEntity.LogicalName : "";
             }
 
-
-
-            if (targetLogicalName != PORTAL_BUSINESS_RULE_ENTITY)
+            if (currentRecordLogicalName != PORTAL_BUSINESS_RULE_ENTITY || currentRecordId == Guid.Empty)
             {
-                tracingService.Trace($"Target entity is invalid:{targetLogicalName}");
+                tracingService.Trace($"Target entity is invalid:{currentRecordLogicalName}");
                 return;
             }
             try
             {
-                // Find the Entity form Id or the Webform step id, in that order
-                Guid recordId = targetId;
-                string logicalName = targetLogicalName;
-                string customJavascript = "";
-                EntityCollection allBusinessRules = new EntityCollection();
-                Entity form = service.Retrieve(logicalName, recordId, new ColumnSet("t365_entityform", "t365_webformstep"));
-                EntityReference entityFormReference = form.GetAttributeValue<EntityReference>("t365_entityform");
-                EntityReference webFormStepReference = form.GetAttributeValue<EntityReference>("t365_webformstep");
-                Entity entityForm = null;
-                Entity webFormStep = null;
-                tracingService.Trace($"Entity Form Reference {entityFormReference} and Web form step reference {webFormStepReference}");
                 if (entityFormReference != null)
                 {
-                    tracingService.Trace("Trying to get the EF entity");
                     entityForm = service.Retrieve(PORTAL_ENTITY_FORM_ENTITY, entityFormReference.Id, new ColumnSet(CUSTOM_JS_FIELD_NAME));
-                    tracingService.Trace("Got the EF entity" + entityForm.Id);
-
                     customJavascript = entityForm.GetAttributeValue<string>(CUSTOM_JS_FIELD_NAME);
-                    tracingService.Trace($"EF {customJavascript}");
                     allBusinessRules = GetBusinessRules(service, tracingService, entityFormReference.Id, ParentType.EntityForm);
 
                 }
@@ -91,36 +76,28 @@ namespace PortalBusinessRulesCustomizations
                     webFormStep = service.Retrieve(PORTAL_WEB_FORM_STEP_ENTITY, webFormStepReference.Id, new ColumnSet(CUSTOM_JS_FIELD_NAME));
                     customJavascript = webFormStep.GetAttributeValue<string>(CUSTOM_JS_FIELD_NAME);
                     allBusinessRules = GetBusinessRules(service, tracingService, webFormStepReference.Id, ParentType.WebFormStep);
-                    tracingService.Trace($"WF {customJavascript}");
-
                 }
                 else
                 {
                     tracingService.Trace("No Entity form or Web form step exist");
                 }
 
+                string documentJS = GenerateAllRulesJS(service, tracingService, allBusinessRules, currentRecordId);
 
-                string allRulesJS = GenerateAllRulesJS(service, tracingService, allBusinessRules, targetId);
-                tracingService.Trace("allRulesJS");
+                if (string.IsNullOrEmpty(customJavascript)) customJavascript = "";
+                if (string.IsNullOrEmpty(documentJS)) documentJS = "";
 
-                if (!string.IsNullOrEmpty(allRulesJS))
+                if (entityFormReference != null)
                 {
-                    if (string.IsNullOrEmpty(customJavascript)) customJavascript = "";
-
-                    // write to the new generated js to the rule itself
-                    if (entityFormReference != null)
-                    {
-                        ModifyTargetCustomJS(service, tracingService, customJavascript, entityForm, ParentType.EntityForm, allRulesJS);
-
-                    }
-                    else if (webFormStepReference != null)
-                    {
-                        ModifyTargetCustomJS(service, tracingService, customJavascript, webFormStep, ParentType.WebFormStep, allRulesJS);
-                    }
-                    else
-                    {
-                        tracingService.Trace($"All Rules JS {allRulesJS}");
-                    }
+                    ModifyTargetCustomJS(service, tracingService, customJavascript, entityForm, ParentType.EntityForm, documentJS);
+                }
+                else if (webFormStepReference != null)
+                {
+                    ModifyTargetCustomJS(service, tracingService, customJavascript, webFormStep, ParentType.WebFormStep, documentJS);
+                }
+                else
+                {
+                    tracingService.Trace($"All Rules JS {documentJS}");
                 }
 
             }
@@ -137,19 +114,21 @@ namespace PortalBusinessRulesCustomizations
         {
             tracingService.Trace("GenerateAllRulesJS");
 
-            StringBuilder newJSText = new StringBuilder();
-            newJSText.Append(AUTO_JS_START_BLOCK);
-            newJSText.Append(DOCUMENT_READY_START);
+            StringBuilder documentJS = new StringBuilder();
+
+            StringBuilder allRulesJS = new StringBuilder();
 
             foreach (Entity businessRule in allBusinessRules.Entities)
             {
+                if (message == "delete" && businessRule.Id == currentBusinessRuleId) continue;
+
                 string ruleAutoJS = GenerateRuleJS(service, tracingService, businessRule);
-                newJSText.Append(ruleAutoJS + "\n");
+                allRulesJS.Append(ruleAutoJS + "\n");
                 // if this is the rule that triggered the plugin, update its automatic javascript
                 tracingService.Trace("trybing to update");
                 if (businessRule.Id == currentBusinessRuleId && message != "delete")
                 {
-                    Entity currentRule = new Entity("t365_portalbusinssrule", businessRule.Id);
+                    Entity currentRule = new Entity("t365_portalbusinessrule", businessRule.Id);
                     currentRule.Attributes["t365_autogeneratedjavascript"] = ruleAutoJS;
                     service.Update(currentRule);
                 }
@@ -157,51 +136,58 @@ namespace PortalBusinessRulesCustomizations
 
             }
 
-            newJSText.Append(DOCUMENT_READY_END);
-            newJSText.Append(AUTO_JS_END_BLOCK);
-
-            return newJSText.ToString();
+            if (allRulesJS.Length > 0)
+            {
+                documentJS.Append(AUTO_JS_START_BLOCK);
+                documentJS.Append(DOCUMENT_READY_START);
+                documentJS.Append(allRulesJS.ToString());
+                documentJS.Append(DOCUMENT_READY_END);
+                documentJS.Append(AUTO_JS_END_BLOCK);
+            }
+            return documentJS.ToString();
         }
 
-        private void ModifyTargetCustomJS(IOrganizationService service, ITracingService tracingService, string cleanedCustomJS, Entity target, ParentType parentType, string allRulesJS)
+        private void ModifyTargetCustomJS(IOrganizationService service, ITracingService tracingService, string cleanedCustomJS, Entity targetEntityFormOrWebFormStep, ParentType parentType, string documentJS)
         {
-            if (target != null)
+            if (targetEntityFormOrWebFormStep != null)
             {
                 tracingService.Trace("ModifyTargetCustomJS");
-
-                cleanedCustomJS = CleanExistingCustomJS(tracingService, cleanedCustomJS);
-                target.Attributes[CUSTOM_JS_FIELD_NAME] = cleanedCustomJS + allRulesJS;
-                service.Update(target);
+                cleanedCustomJS = CleanExistingCustomJS(tracingService, cleanedCustomJS, documentJS);
+                targetEntityFormOrWebFormStep.Attributes[CUSTOM_JS_FIELD_NAME] = cleanedCustomJS + documentJS;
+                service.Update(targetEntityFormOrWebFormStep);
             }
         }
 
-        private string CleanExistingCustomJS(ITracingService tracingService, string formCustomJS)
+        private string CleanExistingCustomJS(ITracingService tracingService, string existingCustomJS, string newDocumentJS)
         {
             tracingService.Trace("CleanExistingCustomJS");
-            tracingService.Trace(formCustomJS);
 
             string injectedScriptString = "document.write(\"<script src='/portal-business-rules.js'></\"" + "+ \"script>\");\n";
 
-            if (!formCustomJS.Contains(injectedScriptString))
+            if (!existingCustomJS.Contains(injectedScriptString))
             {
-                formCustomJS = injectedScriptString + formCustomJS;
+                existingCustomJS = injectedScriptString + existingCustomJS;
+            }
+            else if (existingCustomJS.Contains(injectedScriptString) && string.IsNullOrEmpty(newDocumentJS))
+            {
+                existingCustomJS.Remove(existingCustomJS.IndexOf(injectedScriptString), injectedScriptString.Length - 1);
             }
 
-            int startingIndex = formCustomJS.IndexOf(AUTO_JS_START_BLOCK);
+            int startingIndex = existingCustomJS.IndexOf(AUTO_JS_START_BLOCK);
             tracingService.Trace($"Starting Index={startingIndex}");
             if (startingIndex >= 0)
             {
-                int endIndex = formCustomJS.IndexOf(AUTO_JS_END_BLOCK) + AUTO_JS_END_BLOCK.Length;
+                int endIndex = existingCustomJS.IndexOf(AUTO_JS_END_BLOCK) + AUTO_JS_END_BLOCK.Length;
                 tracingService.Trace($"End Index={endIndex}");
 
                 if (endIndex - startingIndex > 0)
                 {
-                    formCustomJS = formCustomJS.Remove(startingIndex, endIndex - startingIndex - 1);
+                    existingCustomJS = existingCustomJS.Remove(startingIndex, endIndex - startingIndex - 1);
                     tracingService.Trace($"Starting Index={startingIndex}");
                 }
             }
 
-            return formCustomJS;
+            return existingCustomJS;
         }
 
         private string GenerateRuleJS(IOrganizationService service, ITracingService tracingService, Entity businessRule)
