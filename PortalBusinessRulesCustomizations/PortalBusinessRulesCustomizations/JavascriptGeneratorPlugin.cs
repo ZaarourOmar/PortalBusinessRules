@@ -15,11 +15,12 @@ namespace PortalBusinessRulesCustomizations
         const string WEB_FORM_STEP_LOGICAL_NAME = "adx_webformstep";
         const string CUSTOM_JS_FIELD_NAME = "adx_registerstartupscript";
 
-        const string AUTO_JS_START_BLOCK = "//START AUTOJS\n";
-        const string AUTO_JS_END_BLOCK = "//END AUTOJS\n";
+        const string AUTO_JS_START_BLOCK = "//START AUTOJS (DON'T DELETE THIS LINE MANUALLY)\n";
+        const string AUTO_JS_END_BLOCK = "//END AUTOJS (DON'T DELETE THIS LINE MANUALLY)\n";
         const string DOCUMENT_READY_START = "$(document).ready(function() {\n";
         const string DOCUMENT_READY_END = "});// end document ready\n";
         const string INJECTED_SCRIPT_CODE = "document.write(\"<script src='/portal-business-rules.js'></\"" + "+ \"script>\");\n";
+        const int PUBLISHED_RULE_STATUS_REASON = 1;
 
         string pluginMessage = "";
         public void Execute(IServiceProvider serviceProvider)
@@ -75,14 +76,17 @@ namespace PortalBusinessRulesCustomizations
                 {
                     entityForm = service.Retrieve(ENTITY_FORM_LOGICAL_NAME, entityFormReference.Id, new ColumnSet(CUSTOM_JS_FIELD_NAME));
                     customJavascript = entityForm.GetAttributeValue<string>(CUSTOM_JS_FIELD_NAME);
-                    allBusinessRules = GetSiblingRules(service, tracingService, entityFormReference.Id, ParentType.EntityForm);
+                    allBusinessRules = GetSiblingRules(service, tracingService, entityFormReference.Id, BusinessRuleParentType.EntityForm);
+
+                    tracingService.Trace("Parent is Entity Form");
 
                 }
                 else if (webFormStepReference != null)
                 {
                     webFormStep = service.Retrieve(WEB_FORM_STEP_LOGICAL_NAME, webFormStepReference.Id, new ColumnSet(CUSTOM_JS_FIELD_NAME));
                     customJavascript = webFormStep.GetAttributeValue<string>(CUSTOM_JS_FIELD_NAME);
-                    allBusinessRules = GetSiblingRules(service, tracingService, webFormStepReference.Id, ParentType.WebFormStep);
+                    allBusinessRules = GetSiblingRules(service, tracingService, webFormStepReference.Id, BusinessRuleParentType.WebFormStep);
+                    tracingService.Trace("Parent is Web Form Step");
                 }
                 else
                 {
@@ -96,11 +100,11 @@ namespace PortalBusinessRulesCustomizations
 
                 if (entityFormReference != null)
                 {
-                    ModifyTargetCustomJS(service, tracingService, customJavascript, entityForm, ParentType.EntityForm, completeJS);
+                    ModifyTargetCustomJS(service, tracingService, customJavascript, entityForm, BusinessRuleParentType.EntityForm, completeJS);
                 }
                 else if (webFormStepReference != null)
                 {
-                    ModifyTargetCustomJS(service, tracingService, customJavascript, webFormStep, ParentType.WebFormStep, completeJS);
+                    ModifyTargetCustomJS(service, tracingService, customJavascript, webFormStep, BusinessRuleParentType.WebFormStep, completeJS);
                 }
                 else
                 {
@@ -128,9 +132,8 @@ namespace PortalBusinessRulesCustomizations
                 if (pluginMessage == "delete" && businessRule.Id == currentBusinessRuleId) continue;
 
                 string ruleAutoJS = GenerateRuleJS(service, tracingService, businessRule);
-                rulesOnlyJS.Append(ruleAutoJS + "\n");
+                rulesOnlyJS.Append(ruleAutoJS);
                 // if this is the rule that triggered the plugin, update its automatic javascript
-                tracingService.Trace("trybing to update");
                 if (businessRule.Id == currentBusinessRuleId && pluginMessage != "delete")
                 {
                     Entity currentRule = new Entity(PORTAL_BUSINESS_RULE_LOGICAL_NAME, businessRule.Id);
@@ -153,18 +156,18 @@ namespace PortalBusinessRulesCustomizations
             return completeJS.ToString();
         }
 
-        private void ModifyTargetCustomJS(IOrganizationService service, ITracingService tracingService, string cleanedCustomJS, Entity targetEntityFormOrWebFormStep, ParentType parentType, string documentJS)
+        private void ModifyTargetCustomJS(IOrganizationService service, ITracingService tracingService, string cleanedCustomJS, Entity targetEntityFormOrWebFormStep, BusinessRuleParentType parentType, string documentJS)
         {
             if (targetEntityFormOrWebFormStep != null)
             {
                 tracingService.Trace("ModifyTargetCustomJS");
-                cleanedCustomJS = CleanExistingCustomJS(tracingService, cleanedCustomJS, documentJS);
-                targetEntityFormOrWebFormStep.Attributes[CUSTOM_JS_FIELD_NAME] = cleanedCustomJS + documentJS;
+                cleanedCustomJS = CleanExistingCustomJS(tracingService, cleanedCustomJS);
+                targetEntityFormOrWebFormStep.Attributes[CUSTOM_JS_FIELD_NAME] = cleanedCustomJS.TrimStart() + documentJS;
                 service.Update(targetEntityFormOrWebFormStep);
             }
         }
 
-        private string CleanExistingCustomJS(ITracingService tracingService, string existingCustomJS, string newDocumentJS)
+        private string CleanExistingCustomJS(ITracingService tracingService, string existingCustomJS)
         {
             tracingService.Trace("CleanExistingCustomJS");
 
@@ -187,6 +190,12 @@ namespace PortalBusinessRulesCustomizations
 
         private string GenerateRuleJS(IOrganizationService service, ITracingService tracingService, Entity businessRule)
         {
+            int statusReason = businessRule.GetAttributeValue<OptionSetValue>("statuscode").Value;
+
+            if (statusReason != PUBLISHED_RULE_STATUS_REASON) // if the rule is not published, don't generate its javascript
+            {
+                return "";
+            }
             string operand1 = businessRule.GetAttributeValue<string>("t365_operand1");
             string operand2 = businessRule.GetAttributeValue<string>("t365_operand2");
             OptionSetValue operatorValue = businessRule.GetAttributeValue<OptionSetValue>("t365_operator");
@@ -201,9 +210,9 @@ namespace PortalBusinessRulesCustomizations
             return generator.GenerateJavacript(operand1, operatorValue.Value, operand2, positiveJson, negativeJson);
         }
 
-        private EntityCollection GetSiblingRules(IOrganizationService service, ITracingService tracingService, Guid parentId, ParentType parentType)
+        private EntityCollection GetSiblingRules(IOrganizationService service, ITracingService tracingService, Guid parentId, BusinessRuleParentType parentType)
         {
-            string targetEntityAttribute = (parentType == ParentType.EntityForm ? "t365_entityform" : "t365_webformstep");
+            string targetEntityAttribute = (parentType == BusinessRuleParentType.EntityForm ? "t365_entityform" : "t365_webformstep");
 
             QueryExpression query = new QueryExpression(PORTAL_BUSINESS_RULE_LOGICAL_NAME);
             query.ColumnSet = new ColumnSet(true);
@@ -213,7 +222,7 @@ namespace PortalBusinessRulesCustomizations
         }
     }
 
-    public enum ParentType
+    public enum BusinessRuleParentType
     {
         EntityForm,
         WebFormStep
