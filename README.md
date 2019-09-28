@@ -1,4 +1,4 @@
-# PortalBusinessRulesRepo
+# Portal Business Rules - An Extension for Dynamics 365 PowerApps Portals
 This is version 1 of my proposed solution to reducing the code needed for customizing Dynamics Portals. Portal Business Rules is a configuration-based solution to customize entity forms and web form steps by non technical user.
 
 Installation Steps:
