@@ -100,7 +100,7 @@ namespace PortalBusinessRulesCustomizations
                 }
                 else
                 {
-                    throw new Exception("Operand 2 Should be a formatted as a datetime");
+                    throw new InvalidCastException("Operand 2 Should be a formatted as a datetime");
                 }
             }
             else if (operand1Type == AttributeTypeCode.Boolean)
@@ -112,7 +112,7 @@ namespace PortalBusinessRulesCustomizations
                 }
                 else
                 {
-                    throw new Exception("Operand 2 Should be a boolean (true or false)");
+                    throw new InvalidCastException("Operand 2 Should be a boolean (true or false)");
                 }
             }
             else if (operand1Type == AttributeTypeCode.Integer)
@@ -124,7 +124,7 @@ namespace PortalBusinessRulesCustomizations
                 }
                 else
                 {
-                    throw new Exception("Operand 2 Should be an integer");
+                    throw new InvalidCastException("Operand 2 Should be an integer");
                 }
             }
             else if (operand1Type == AttributeTypeCode.Double)
@@ -136,7 +136,7 @@ namespace PortalBusinessRulesCustomizations
                 }
                 else
                 {
-                    throw new Exception("Operand 2 Should be an double");
+                    throw new InvalidCastException("Operand 2 Should be an double");
                 }
             }
             else if (operand1Type == AttributeTypeCode.Decimal)
@@ -148,7 +148,7 @@ namespace PortalBusinessRulesCustomizations
                 }
                 else
                 {
-                    throw new Exception("Operand 2 Should be decimal");
+                    throw new InvalidCastException("Operand 2 Should be decimal");
                 }
             }
             else if (operand1Type == AttributeTypeCode.Lookup)
@@ -160,7 +160,7 @@ namespace PortalBusinessRulesCustomizations
                 }
                 else
                 {
-                    throw new Exception("Operand 2 Should be a GUID");
+                    throw new InvalidCastException("Operand 2 Should be a GUID");
                 }
             }
             else if (operand1Type == AttributeTypeCode.Picklist)
@@ -172,7 +172,7 @@ namespace PortalBusinessRulesCustomizations
                 }
                 else
                 {
-                    throw new Exception("Operand 2 Should be the integer value of the option");
+                    throw new InvalidCastException("Operand 2 Should be the integer value of the option");
                 }
             }
             else if (operand1Type == AttributeTypeCode.Memo || operand1Type == AttributeTypeCode.String)
@@ -206,13 +206,6 @@ namespace PortalBusinessRulesCustomizations
 
         }
 
-        private bool IsValidNonString(string operand2)
-        {
-            return operand2.All(char.IsNumber) || operand2 == "true" || operand2 == "false";
-        }
-
-
-
         /// <summary>
         /// The entry point of the Rule JS generator. This function constructs the If statement and wraps it with a documentready function.
         /// </summary>
@@ -237,6 +230,11 @@ namespace PortalBusinessRulesCustomizations
                 return finalOutput;
             }
 
+            catch (InvalidCastException castException)
+            {
+                TracingService.Trace("An invalid cast exception has been caught.");
+                throw castException;
+            }
             catch (Exception ex)
             {
                 throw ex;
