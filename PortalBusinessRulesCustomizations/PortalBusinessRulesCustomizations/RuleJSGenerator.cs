@@ -46,9 +46,7 @@ namespace PortalBusinessRulesCustomizations
         {
             string operatorSymbol = "";
             string ifStatement = "";
-            string[] operand2Values = operand2.Split('^');
             string operand2JsArray;
-
             switch (operatorValue)
             {
                 case 497060000:
@@ -87,6 +85,8 @@ namespace PortalBusinessRulesCustomizations
                 default:
                     throw new Exception("Operand 2 value is not formatted properly.");
             }
+
+            TracingService.Trace(operatorValue.ToString());
 
             if (operand1Type == AttributeTypeCode.DateTime)
             {
@@ -231,12 +231,12 @@ namespace PortalBusinessRulesCustomizations
                 string ifStatement = GenerateIfStatement(operand1, operatorValue, operand2, operand1Type);
                 string ifTrueBody = GenerateIfElseBody(positiveJson, operand1Type);
                 string ifFalseBody = GenerateIfElseBody(negativeJson, operand1Type);
-            
+
                 string finalOutput = ConstructFinalOutput(operand1, operand1Type, ifStatement, ifTrueBody, ifFalseBody);
 
                 return finalOutput;
             }
-           
+
             catch (Exception ex)
             {
                 throw ex;
