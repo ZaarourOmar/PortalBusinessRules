@@ -27,6 +27,7 @@ namespace PortalBusinessRulesCustomizations.Util
 
             foreach (string s in operandValues)
             {
+                if (s == "0" || s == "1") return true;//this is specialfor CRM only
                 if (!bool.TryParse(s, out result))
                 {
                     return false;

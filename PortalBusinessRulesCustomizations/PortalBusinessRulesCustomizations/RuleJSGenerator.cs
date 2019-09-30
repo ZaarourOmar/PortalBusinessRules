@@ -114,7 +114,10 @@ namespace PortalBusinessRulesCustomizations
                         throw new InvalidCastException("Operand 2 Should be a boolean (true or false)");
                     }
                     break;
+                case AttributeTypeCode.State:
+                case AttributeTypeCode.Status:
                 case AttributeTypeCode.Integer:
+                case AttributeTypeCode.Picklist:
                     if (validator.IsInteger(operand2))
                     {
                         ifStatement = $"if (getFieldValue(\"{operand1}\") {operatorSymbol} {operand2})";
@@ -154,16 +157,6 @@ namespace PortalBusinessRulesCustomizations
                         throw new InvalidCastException("Operand 2 Should be a GUID");
                     }
                     break;
-                case AttributeTypeCode.Picklist:
-                    if (validator.IsPiclist(operand2))
-                    {
-                        ifStatement = $"if (getFieldValue(\"{operand1}\") {operatorSymbol} {operand2})";
-                    }
-                    else
-                    {
-                        throw new InvalidCastException("Operand 2 Should be the integer value of the option");
-                    }
-                    break;
                 default: // everything else is handled as string
                     ifStatement = $"if (getFieldValue(\"{operand1}\") {operatorSymbol} \"{operand2}\")";
                     break;
@@ -179,6 +172,8 @@ namespace PortalBusinessRulesCustomizations
 
             switch (operand1Type)
             {
+                case AttributeTypeCode.State:
+                case AttributeTypeCode.Status:
                 case AttributeTypeCode.Integer:
                 case AttributeTypeCode.Picklist:
                     return validator.IsInteger(operand2Values);
@@ -190,8 +185,11 @@ namespace PortalBusinessRulesCustomizations
                     return validator.IsLookup(operand2Values);
                 case AttributeTypeCode.DateTime:
                     return validator.IsDate(operand2Values);
+                case AttributeTypeCode.String:
+                case AttributeTypeCode.Memo:
+                    return true;
                 default:
-                    return false;
+                    throw new InvalidCastException("Unrecognized Operand1 type");
             }
         }
         private string GenerateJSArray(string operand2, AttributeTypeCode operand1Type)
@@ -223,10 +221,10 @@ namespace PortalBusinessRulesCustomizations
         /// <param name="positiveJson"></param>
         /// <param name="negativeJson"></param>
         /// <returns></returns>
-        public string GenerateJavacript(string ruleName,string operand1, int operatorValue, string operand2, string positiveJson, string negativeJson)
+        public string GenerateJavacript(string ruleName, Guid ruleId, string operand1, int operatorValue, string operand2, string positiveJson, string negativeJson)
         {
             try
-            { 
+            {
                 AttributeTypeCode operand1Type = GetAttributeType(Service, EntityName, operand1);
                 string ifStatement = GenerateIfStatement(operand1, operatorValue, operand2, operand1Type);
                 string ifTrueBody = GenerateIfElseBody(positiveJson, operand1Type);
@@ -240,6 +238,7 @@ namespace PortalBusinessRulesCustomizations
             catch (InvalidCastException castException)
             {
                 castException.Data.Add("RuleName", ruleName);
+                castException.Data.Add("RuleId", ruleId);
                 TracingService.Trace("An invalid cast exception has been caught.");
                 throw castException;
             }

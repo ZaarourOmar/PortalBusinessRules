@@ -81,7 +81,6 @@
     <Compile Include="JavascriptGeneratorPlugin.cs" />
     <Compile Include="Util\DataTypeValidator.cs" />
     <Compile Include="Util\Exceptions.cs" />
-    <Compile Include="JavascriptGeneratorWA.cs" />
     <Compile Include="RuleJSGenerator.cs" />
     <Compile Include="Util\JSONConverter.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
