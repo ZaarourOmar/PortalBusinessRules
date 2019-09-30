@@ -87,12 +87,18 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
+    <None Include="CRM Solutions\PortalBusinessRules_1_0_0_7.zip" />
+    <None Include="CRM Solutions\PortalBusinessRules_1_0_0_7_managed.zip" />
     <None Include="key.snk" />
     <None Include="packages.config" />
   </ItemGroup>
+  <ItemGroup />
   <ItemGroup>
-    <Folder Include="CRM Solutions\" />
-    <Folder Include="Icons\" />
+    <Content Include="Icons\conditional.png" />
+    <Content Include="Icons\conditional16X16.png" />
+    <Content Include="Icons\conditional32X32.png" />
+    <Content Include="Installation Steps.txt" />
+    <Content Include="Portal JS Helper\Webfile-Javascript-Content.txt" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

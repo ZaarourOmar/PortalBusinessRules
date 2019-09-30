@@ -1,0 +1,4 @@
+﻿1) import the managed or unmanaged solution into an organization where the portal add-on is installed.
+2) Create a web file with partial url equals "portal-business-rules.js" 
+and attach the file "Portal JS Helper/Webfile-Javascript-Content.txt" to it as a note. 
+Make sure to set the parent page of this web file to be the Home page. You can find the 
