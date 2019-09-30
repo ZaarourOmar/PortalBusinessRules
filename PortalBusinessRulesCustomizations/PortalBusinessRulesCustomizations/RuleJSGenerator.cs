@@ -74,132 +74,139 @@ namespace PortalBusinessRulesCustomizations
                     ifStatement = $"if (!Boolean(getFieldValue(\"{operand1}\")))";
                     return ifStatement;
                 case 497060008: //in
-                    operand2JsArray = GenerateJSArray(operand2, true);
+                    operand2JsArray = GenerateJSArray(operand2, operand1Type);
                     ifStatement = $"if ({operand2JsArray}.includes(getFieldValue(\"{operand1}\")))";
                     return ifStatement;
                 case 497060009: // not in
-                    operand2JsArray = GenerateJSArray(operand2, true);
+                    operand2JsArray = GenerateJSArray(operand2, operand1Type);
                     ifStatement = $"if (!{operand2JsArray}.includes(getFieldValue(\"{operand1}\")))";
                     return ifStatement;
 
                 default:
-                    throw new Exception("Operand 2 value is not formatted properly.");
+                    throw new InvalidOperationException($"Unrecognized Operator Value: {operatorValue}");
             }
 
-            TracingService.Trace(operatorValue.ToString());
+            DataTypeValidator validator = new DataTypeValidator();
 
-            if (operand1Type == AttributeTypeCode.DateTime)
+            switch (operand1Type)
             {
-                //make sure operand 2 is valid date
-                DateTime result;
-                if (DateTime.TryParse(operand2, out result))
-                {
-                    string date1 = $"new Date(getFieldValue(\"{operand1}\"))";
-                    string date2 = $"new Date(\"{operand2}\")";
-                    ifStatement = $"if ({date1} {operatorSymbol} {date2})";
-                }
-                else
-                {
-                    throw new InvalidCastException("Operand 2 Should be a formatted as a datetime");
-                }
-            }
-            else if (operand1Type == AttributeTypeCode.Boolean)
-            {
-                bool result;
-                if (bool.TryParse(operand2, out result) || operand2 == "1" || operand2 == "0")
-                {
-                    ifStatement = $"if (getFieldValue(\"{operand1}\") {operatorSymbol} {operand2})";
-                }
-                else
-                {
-                    throw new InvalidCastException("Operand 2 Should be a boolean (true or false)");
-                }
-            }
-            else if (operand1Type == AttributeTypeCode.Integer)
-            {
-                int result;
-                if (int.TryParse(operand2, out result))
-                {
-                    ifStatement = $"if (getFieldValue(\"{operand1}\") {operatorSymbol} {operand2})";
-                }
-                else
-                {
-                    throw new InvalidCastException("Operand 2 Should be an integer");
-                }
-            }
-            else if (operand1Type == AttributeTypeCode.Double)
-            {
-                double result;
-                if (double.TryParse(operand2, out result))
-                {
-                    ifStatement = $"if (getFieldValue(\"{operand1}\") {operatorSymbol} {operand2})";
-                }
-                else
-                {
-                    throw new InvalidCastException("Operand 2 Should be an double");
-                }
-            }
-            else if (operand1Type == AttributeTypeCode.Decimal)
-            {
-                decimal result;
-                if (decimal.TryParse(operand2, out result))
-                {
-                    ifStatement = $"if (getFieldValue(\"{operand1}\") {operatorSymbol} {operand2})";
-                }
-                else
-                {
-                    throw new InvalidCastException("Operand 2 Should be decimal");
-                }
-            }
-            else if (operand1Type == AttributeTypeCode.Lookup)
-            {
-                Guid result;
-                if (Guid.TryParse(operand2, out result))
-                {
+                case AttributeTypeCode.DateTime:
+                    //make sure operand 2 is valid date
+                    if (validator.IsDate(operand2))
+                    {
+                        string date1 = $"new Date(getFieldValue(\"{operand1}\"))";
+                        string date2 = $"new Date(\"{operand2}\")";
+                        ifStatement = $"if ({date1} {operatorSymbol} {date2})";
+                    }
+                    else
+                    {
+                        throw new InvalidCastException("Operand 2 Should be a formatted as a datetime");
+                    }
+                    break;
+
+                case AttributeTypeCode.Boolean:
+                    if (validator.IsBoolean(operand2))
+                    {
+                        ifStatement = $"if (getFieldValue(\"{operand1}\") {operatorSymbol} {operand2})";
+                    }
+                    else
+                    {
+                        throw new InvalidCastException("Operand 2 Should be a boolean (true or false)");
+                    }
+                    break;
+                case AttributeTypeCode.Integer:
+                    if (validator.IsInteger(operand2))
+                    {
+                        ifStatement = $"if (getFieldValue(\"{operand1}\") {operatorSymbol} {operand2})";
+                    }
+                    else
+                    {
+                        throw new InvalidCastException("Operand 2 Should be an integer");
+                    }
+                    break;
+                case AttributeTypeCode.Double:
+                    if (validator.IsDouble(operand2))
+                    {
+                        ifStatement = $"if (getFieldValue(\"{operand1}\") {operatorSymbol} {operand2})";
+                    }
+                    else
+                    {
+                        throw new InvalidCastException("Operand 2 Should be an double");
+                    }
+                    break;
+                case AttributeTypeCode.Decimal:
+                    if (validator.IsDecimal(operand2))
+                    {
+                        ifStatement = $"if (getFieldValue(\"{operand1}\") {operatorSymbol} {operand2})";
+                    }
+                    else
+                    {
+                        throw new InvalidCastException("Operand 2 Should be decimal");
+                    }
+                    break;
+                case AttributeTypeCode.Lookup:
+                    if (validator.IsLookup(operand2))
+                    {
+                        ifStatement = $"if (getFieldValue(\"{operand1}\") {operatorSymbol} \"{operand2}\")";
+                    }
+                    else
+                    {
+                        throw new InvalidCastException("Operand 2 Should be a GUID");
+                    }
+                    break;
+                case AttributeTypeCode.Picklist:
+                    if (validator.IsPiclist(operand2))
+                    {
+                        ifStatement = $"if (getFieldValue(\"{operand1}\") {operatorSymbol} {operand2})";
+                    }
+                    else
+                    {
+                        throw new InvalidCastException("Operand 2 Should be the integer value of the option");
+                    }
+                    break;
+                default: // everything else is handled as string
                     ifStatement = $"if (getFieldValue(\"{operand1}\") {operatorSymbol} \"{operand2}\")";
-                }
-                else
-                {
-                    throw new InvalidCastException("Operand 2 Should be a GUID");
-                }
+                    break;
             }
-            else if (operand1Type == AttributeTypeCode.Picklist)
-            {
-                int result;
-                if (int.TryParse(operand2, out result))
-                {
-                    ifStatement = $"if (getFieldValue(\"{operand1}\") {operatorSymbol} {operand2})";
-                }
-                else
-                {
-                    throw new InvalidCastException("Operand 2 Should be the integer value of the option");
-                }
-            }
-            else if (operand1Type == AttributeTypeCode.Memo || operand1Type == AttributeTypeCode.String)
-            {
-                ifStatement = $"if (getFieldValue(\"{operand1}\") {operatorSymbol} \"{operand2}\")";
-            }
-
-
 
             return ifStatement;
         }
 
-        private string GenerateJSArray(string operand2, bool textualValues)
+        public bool ValidateOperand2BasedOnOperand1Type(AttributeTypeCode operand1Type, string operand2, bool multiOperand2Values)
         {
-            string[] values = operand2.Split('^');
+            DataTypeValidator validator = new DataTypeValidator();
+            string[] operand2Values = operand2.Split('^');
+
+            switch (operand1Type)
+            {
+                case AttributeTypeCode.Integer:
+                case AttributeTypeCode.Picklist:
+                    return validator.IsInteger(operand2Values);
+                case AttributeTypeCode.Double:
+                    return validator.IsDouble(operand2Values);
+                case AttributeTypeCode.Decimal:
+                    return validator.IsDecimal(operand2Values);
+                case AttributeTypeCode.Lookup:
+                    return validator.IsLookup(operand2Values);
+                case AttributeTypeCode.DateTime:
+                    return validator.IsDate(operand2Values);
+                default:
+                    return false;
+            }
+        }
+        private string GenerateJSArray(string operand2, AttributeTypeCode operand1Type)
+        {
+            string[] operand2Values = operand2.Split('^');
+            if (!ValidateOperand2BasedOnOperand1Type(operand1Type, operand2, true))
+            {
+                throw new InvalidCastException("Operand 2 value types don't match operand 1 type");
+            }
+
             StringBuilder sb = new StringBuilder();
             sb.Append("[");
-            foreach (string s in values)
+            foreach (string s in operand2Values)
             {
-                if (textualValues)
-                {
-                    sb.Append($"\"{s}\",");
-                }
-                else
-                {
-                    sb.Append($"{s},");
-                }
+                sb.Append($"\"{s}\",");
             }
             sb.Append("]");
             return sb.ToString();
@@ -216,10 +223,10 @@ namespace PortalBusinessRulesCustomizations
         /// <param name="positiveJson"></param>
         /// <param name="negativeJson"></param>
         /// <returns></returns>
-        public string GenerateJavacript(string operand1, int operatorValue, string operand2, string positiveJson, string negativeJson)
+        public string GenerateJavacript(string ruleName,string operand1, int operatorValue, string operand2, string positiveJson, string negativeJson)
         {
             try
-            {
+            { 
                 AttributeTypeCode operand1Type = GetAttributeType(Service, EntityName, operand1);
                 string ifStatement = GenerateIfStatement(operand1, operatorValue, operand2, operand1Type);
                 string ifTrueBody = GenerateIfElseBody(positiveJson, operand1Type);
@@ -232,6 +239,7 @@ namespace PortalBusinessRulesCustomizations
 
             catch (InvalidCastException castException)
             {
+                castException.Data.Add("RuleName", ruleName);
                 TracingService.Trace("An invalid cast exception has been caught.");
                 throw castException;
             }
